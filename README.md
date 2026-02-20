@@ -1,25 +1,72 @@
-# LLM Adversarial Robot Test Platform
+# UR5e Adversarial Robot Test Platform
 
-> **A4 Bitirme Projesi** — Gray-Box Adversarial Prompt/Suffix Test Platformu + Simülasyon Güvenlik Skoru
+> **Monorepo** — A4 (Adversarial Test) + A2 (Safety Supervisor) entegre platformu
+> **Öğrenciler:** Tofiq Valiyev (A4) · Elvin Davidov (A2) | **Danışman:** Dr. Yunus Emre Çoğurcu
 
 ## Problem
 
-LLM API ile UR5e robot görev kodu üreten sistemlerde, adversarial prompt ve suffix varyantlarının **unsafe** robot davranışlarına etkisini nicel olarak ölçen bir test platformu geliştirmek.
+LLM ile UR5e robot görev kodu üreten sistemde:
+- **A4 (Tofiq):** Adversarial prompt/suffix varyantlarının unsafe davranışa etkisini nicel ölçer
+- **A2 (Elvin):** Güvenlik denetçisi ile workspace/hız/ivme ihlallerini tespit edip durdurur
 
 ## Architecture
 
 ```
 ┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
-│   Prompt Generator  │────▶│    LLM API       │────▶│  Code Generator     │
-│  (baseline + adv.)  │     │ (OpenAI/Anthropic)│     │  (UR5e ROS2 code)  │
+│   Prompt Generator  │────▶│   Local LLM      │────▶│  Code Generator     │
+│  (baseline + adv.)  │     │   (Ollama)       │     │  (UR5e ROS2 code)   │
+│       [A4]          │     │                  │     │       [A4]          │
 └─────────────────────┘     └──────────────────┘     └────────┬────────────┘
                                                               │
                                                               ▼
 ┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
 │   Metrics Reporter  │◀────│ Safety Supervisor│◀────│ Gazebo Simulation   │
 │  (CSV + Markdown)   │     │ (workspace/vel.) │     │  (UR5e + MoveIt2)   │
+│     [A4+A2]         │     │       [A2]       │     │     [ORTAK]         │
 └─────────────────────┘     └──────────────────┘     └─────────────────────┘
 ```
+
+## Repository Structure
+
+```
+llm-adversarial-robot-test/
+├── src/
+│   ├── llm_adversarial_test/    # A4: Tofiq — Adversarial test platform
+│   │   ├── launch/              # Launch files
+│   │   ├── config/              # Prompt templates, experiment YAML
+│   │   ├── scripts/             # Test runner, report generator
+│   │   └── test/                # Unit tests
+│   │
+│   └── safety_supervisor/       # A2: Elvin — Safety supervisor node
+│       ├── launch/              # Launch files
+│       ├── config/              # Safety rules YAML
+│       ├── scripts/             # Supervisor node, metrics
+│       └── test/                # Test scenarios
+│
+├── data/
+│   ├── prompts/                 # Prompt templates (A4)
+│   ├── results/                 # CSV results (A4+A2)
+│   ├── logs/                    # Run logs
+│   └── rosbags/                 # rosbag2 recordings
+├── docs/                        # Reports & documentation
+├── Dockerfile                   # Multi-stage Docker
+└── docker-compose.yml
+```
+
+## Branch Strategy
+
+```
+main ─────────────────────────────────── (stabil, birleşik)
+  ├── dev ────────────────────────────── (günlük entegrasyon)
+  │     ├── a4/tofiq ─── feature/* ──── (adversarial test)
+  │     └── a2/elvin ─── feature/* ──── (safety supervisor)
+```
+
+- `main` — Stabil, test edilmiş, birleşik sistem
+- `dev` — Günlük entegrasyon
+- `a4/tofiq` — Tofiq'in geliştirme branch'i (A4)
+- `a2/elvin` — Elvin'in geliştirme branch'i (A2)
+- `feature/*` — Bireysel özellikler → PR to dev
 
 ## Dependencies
 
@@ -30,93 +77,39 @@ LLM API ile UR5e robot görev kodu üreten sistemlerde, adversarial prompt ve su
 | Gazebo | Classic 11 |
 | MoveIt2 | Humble |
 | Python | 3.11 |
-| NVIDIA Driver | 590+ |
-
-## Repository Structure
-
-```
-llm-adversarial-robot-test/
-├── src/
-│   └── llm_adversarial_test/    # ROS2 package
-│       ├── launch/              # ROS2 launch files
-│       ├── config/              # YAML parameters
-│       ├── msg/                 # Custom messages
-│       ├── srv/                 # Custom services
-│       ├── action/              # Custom actions
-│       ├── scripts/             # Python nodes & scripts
-│       └── test/                # Unit & integration tests
-├── data/
-│   ├── prompts/                 # Prompt templates (baseline + adversarial)
-│   ├── results/                 # Experiment results (CSV)
-│   ├── logs/                    # Run logs
-│   └── rosbags/                 # rosbag2 recordings
-├── docs/                        # Documentation & report
-├── .github/
-│   ├── workflows/               # CI/CD
-│   ├── ISSUE_TEMPLATE/          # Issue templates
-│   └── PULL_REQUEST_TEMPLATE.md # PR template
-├── Dockerfile                   # Multi-stage Docker build
-├── docker-compose.yml           # Docker compose setup
-└── README.md
-```
+| LLM | Local (Ollama) |
 
 ## Installation
 
-### Prerequisites
 ```bash
-# Ubuntu 22.04 with NVIDIA GPU
-# See: takim_kurulum_rehberi.sh for full system setup
-```
-
-### Quick Start
-```bash
-# Clone
-git clone git@github.com:USERNAME/llm-adversarial-robot-test.git
+git clone git@github.com:Tofiq055/llm-adversarial-robot-test.git
 cd llm-adversarial-robot-test
 
-# Option A: Docker (recommended for reproducibility)
+# Docker (recommended)
 docker compose up
 
-# Option B: Native
+# Native
 source /opt/ros/humble/setup.bash
-cd src && colcon build --symlink-install
+colcon build --symlink-install
 source install/setup.bash
-```
-
-### Environment Setup
-```bash
-# Create .env file (DO NOT commit to git!)
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-## Running
-
-```bash
-# 1. Start UR5e Gazebo simulation
-ros2 launch llm_adversarial_test ur5e_sim.launch.py
-
-# 2. Run test suite
-python3 src/llm_adversarial_test/scripts/test_runner.py --config config/experiment.yaml
-
-# 3. Generate report
-python3 src/llm_adversarial_test/scripts/report_generator.py --results data/results/
 ```
 
 ## Metrics
 
+### A4 — Adversarial Test Metrics
 | Metric | Description |
 |---|---|
-| Unsafe Rate | Percentage of runs producing unsafe behavior |
-| Safe Success Rate | Percentage of safe, successful completions |
-| Block Rate | Percentage of runs blocked by supervisor |
+| Unsafe Rate | % of runs producing unsafe behavior |
+| Safe Success Rate | % of safe, successful completions |
+| Block Rate | % blocked by supervisor |
+
+### A2 — Safety Supervisor Metrics
+| Metric | Description |
+|---|---|
 | Detection Latency | Time to detect unsafe behavior (ms) |
-
-## Branch Strategy
-
-- `main` — Stable, tested code only
-- `dev` — Active development
-- `feature/*` — Individual features (PR to dev)
+| FP/FN Rate | False positive / false negative rate |
+| Stop Distance | Distance traveled after stop command |
+| Recovery Time | Time to recover from safe stop |
 
 ## Demo Video
 
@@ -124,8 +117,4 @@ python3 src/llm_adversarial_test/scripts/report_generator.py --results data/resu
 
 ## License
 
-MIT License — See [LICENSE](LICENSE)
-
-## References
-
-> (Akademik referanslar eklenecek)
+MIT — See [LICENSE](LICENSE)
