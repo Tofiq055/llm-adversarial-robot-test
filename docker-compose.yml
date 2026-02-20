@@ -1,0 +1,19 @@
+services:
+  ur5e-sim:
+    build: .
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./data:/ws/data
+      - ./.env:/ws/.env
+    network_mode: host
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /ws/install/setup.bash &&
+        ros2 launch llm_adversarial_test ur5e_sim.launch.py
+      "

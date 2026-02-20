@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# rosbag2 recordings (too large for git)
+data/rosbags/*.db3
+data/rosbags/*.mcap
+data/rosbags/metadata.yaml
+
+# Experiment results (regeneratable)
+data/results/*.csv
+data/logs/*.log
+
+# Environment secrets
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Python virtual environments
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
