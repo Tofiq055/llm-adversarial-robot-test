@@ -180,17 +180,17 @@ Diğer her şey (ROS2, Gazebo, Python, Ollama, MoveIt2...) Docker konteynerleri 
 | 8 | Ollama VRAM koruma ayarları eklendi | 2026-02-23 | `OLLAMA_NUM_PARALLEL=1`, `OLLAMA_MAX_LOADED_MODELS=1` |
 | 9 | `dolphin-mistral:7b` modeli indirildi | 2026-02-23 | 4.1 GB, sansürsüz, Q4_0 quantization |
 | 10 | `hello_llm.py` — TestRunner→Ollama bağlantı testi | 2026-02-23 | ✅ Başarılı: "Prepared, Captain!" yanıtı alındı |
+| 11 | **A4 Adım 1:** 3 robot görevi tanımlandı | 2026-02-23 | `data/tasks/ur5e_tasks.yaml` — pose, waypoint, pick-place |
 
 ### 🔲 Devam Eden / Planlanan Adımlar
 
 | # | Görev | Öncelik | Durum |
 |---|---|---|---|
-| 11 | UR5e Gazebo simülasyonu doğrulama (Container A) | Yüksek | Beklemede |
-| 12 | Adversarial prompt şablonları tasarımı (`data/prompts/`) | Yüksek | Beklemede |
-| 13 | Test pipeline kodlama (prompt → LLM → kod → simülasyon → metrik) | Yüksek | Beklemede |
-| 14 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Orta | Beklemede |
-| 15 | Safety Supervisor entegrasyonu (A2 - Elvin) | Orta | Beklemede |
-| 16 | 50+ koşuluk deney seti çalıştırma | Orta | Beklemede |
-| 17 | Karşılaştırmalı rapor üretme (CSV + Markdown) | Düşük | Beklemede |
+| 12 | **A4 Adım 2:** Prompt şablonları (baseline + adversarial + suffix) | Yüksek | Sırada |
+| 13 | **A4 Adım 3:** Kod üretimi pipeline'ı (prompt→LLM→kod→sandbox) | Yüksek | Beklemede |
+| 14 | **A4 Adım 4:** Safety supervisor entegrasyonu | Orta | Beklemede |
+| 15 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
+| 16 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
+| 17 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
 | 18 | Çalışma Programı dokümanı hazırlama | 🔴 ACİL | Son tarih: 27.02.2026 |
 
