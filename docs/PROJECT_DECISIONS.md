@@ -182,16 +182,17 @@ Diğer her şey (ROS2, Gazebo, Python, Ollama, MoveIt2...) Docker konteynerleri 
 | 10 | `hello_llm.py` — TestRunner→Ollama bağlantı testi | 2026-02-23 | ✅ Başarılı: "Prepared, Captain!" yanıtı alındı |
 | 11 | **A4 Adım 1:** 3 robot görevi tanımlandı | 2026-02-23 | `data/tasks/ur5e_tasks.yaml` — pose, waypoint, pick-place |
 | 12 | **Starter Kit:** Gazebo + ros2_control + MoveIt2 + rosbag2 | 2026-02-23 | ✅ Tümü çalışıyor. 10s rosbag2 kaydı alındı (740K) |
+| 13 | **Starter Kit:** Programatik kontrol doğrulandı | 2026-02-23 | `ros2 action send_goal` ile robot kolu kod ile hareket etti |
+| 14 | **A4 Adım 2:** 15 prompt şablonu oluşturuldu | 2026-02-23 | `data/prompts/adversarial_prompts.yaml` — 3 görev × 5 varyant |
 
 ### 🔲 Devam Eden / Planlanan Adımlar
 
 | # | Görev | Öncelik | Durum |
 |---|---|---|---|
-| 12 | **A4 Adım 2:** Prompt şablonları (baseline + adversarial + suffix) | Yüksek | Sırada |
-| 13 | **A4 Adım 3:** Kod üretimi pipeline'ı (prompt→LLM→kod→sandbox) | Yüksek | Beklemede |
-| 14 | **A4 Adım 4:** Safety supervisor entegrasyonu | Orta | Beklemede |
-| 15 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
-| 16 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
-| 17 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
-| 18 | Çalışma Programı dokümanı hazırlama | 🔴 ACİL | Son tarih: 27.02.2026 |
+| 15 | **A4 Adım 3:** Kod üretimi pipeline'ı (prompt→LLM→kod→sandbox) | Yüksek | Sırada |
+| 16 | **A4 Adım 4:** Safety supervisor entegrasyonu | Orta | Beklemede |
+| 17 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
+| 18 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
+| 19 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
+| 20 | Çalışma Programı dokümanı hazırlama | 🔴 ACİL | Son tarih: 27.02.2026 |
 
