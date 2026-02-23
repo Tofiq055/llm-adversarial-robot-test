@@ -1,7 +1,7 @@
 # ÇALIŞMA PROGRAMI (PROJE PLANI)
 
 **Dersin Adı:** Graduation Thesis (Bitirme Projesi)  
-**Öğrenci Adı Soyadı:** Tofiq Valiyev  
+**Öğrenci Adı Soyadı:** Tofig Valiyev  
 **Grup:** Grup A – Güvenilir Robot Yazılımı (UR5e / Gazebo / MoveIt2)  
 **Proje Konusu:** A4 – Gray-Box Adversarial Prompt/Suffix Test Platformu + Simülasyon Güvenlik Skoru  
 **Danışman Öğretim Üyesi:** Dr. Yunus Emre Çoğurcu  
