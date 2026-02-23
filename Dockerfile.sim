@@ -1,0 +1,58 @@
+# ---- Stage 1: ROS2 Base ----
+FROM osrf/ros:humble-desktop AS ros-base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-colcon-common-extensions \
+    python3-vcstool \
+    git \
+    wget \
+    curl \
+    ros-humble-gazebo-ros-pkgs \
+    ros-humble-gazebo-ros2-control \
+    ros-humble-moveit \
+    ros-humble-moveit-setup-assistant \
+    ros-humble-moveit-visual-tools \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
+    ros-humble-rosbag2 \
+    ros-humble-rosbag2-storage-mcap \
+    ros-humble-ur-msgs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- Stage 2: UR5e Workspace ----
+FROM ros-base AS ur5e-workspace
+
+WORKDIR /ur5e_ws
+RUN mkdir src && \
+    git clone -b humble https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git src/Universal_Robots_ROS2_Description && \
+    git clone -b humble https://github.com/UniversalRobots/Universal_Robots_ROS2_Gazebo_Simulation.git src/Universal_Robots_ROS2_Gazebo_Simulation
+
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    apt-get update && \
+    rosdep install --from-paths src --ignore-src -r -y && \
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# ---- Stage 3: A4 + A2 Project Environment ----
+FROM ur5e-workspace AS app
+
+WORKDIR /ws
+
+# Copy project source code
+COPY src/ /ws/src/
+
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && \
+    source /ur5e_ws/install/setup.bash && \
+    apt-get update && \
+    rosdep install --from-paths src --ignore-src -r -y || true && \
+    colcon build --symlink-install"
+
+# Default entrypoint
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Sleep infinity so the container stays alive allowing 'docker compose exec' commands
+CMD ["sleep", "infinity"]

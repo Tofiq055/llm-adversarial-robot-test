@@ -1,72 +1,81 @@
-# 🚀 Kurulum Rehberi
+# 🚀 Hızlı Kurulum Rehberi (Docker Mimarisi)
 
-Bu rehber, **Grup A** projeleri için Ubuntu 22.04 + NVIDIA GPU sisteminizi hazırlar.
+Bu rehber, **Grup A** (A4 Adversarial Test ve A2 Safety Supervisor) projeleri için sisteminizi hazırlar.
+
+**DİKKAT:** Proje host (yerel) bilgisayar üzerinde DEĞİL, tamamen izole Docker konteynerleri içinde çalışacak şekilde tasarlanmıştır.
 
 ## Gereksinimler
 
 | Bileşen | Minimum |
 |---|---|
 | OS | Ubuntu 22.04 LTS |
-| GPU | NVIDIA (driver kurulu) |
+| GPU | NVIDIA (driver kurulu olmalı) |
 | RAM | 8 GB+ (16 GB önerilir) |
 | Disk | 30 GB boş alan |
 
-## Hızlı Kurulum
+> [!important]
+> **RTX 3060 Kısıtlaması**: Sistemin aynı anda hem 3D simülasyon modelini (Gazebo) oluşturması hem de Yerel YZ modelini (Ollama) GPU üzerinde tutabilmesi için VRAM'in (6GB) dikkatli kullanılması gerekir.
+
+---
+
+## Kurulum Adımları
+
+### 1. Host Hazırlığı (Sadece 1 Kere)
+
+İşletim sisteminizde sadece **NVIDIA sürücüsü**, **Docker** ve **NVIDIA Container Toolkit** olması yeterlidir. Bunları kurmak için:
 
 ```bash
-# 1. Repo'yu klonla
+# Repo'yu klonla
 git clone https://github.com/Tofiq055/llm-adversarial-robot-test.git
 cd llm-adversarial-robot-test
 
-# 2. Script'i çalıştır
-bash setup.sh
+# Host hazırlık betiğini çalıştır
+bash setup_host.sh
 ```
 
-Script **interaktif** olarak adınızı, e-postanızı ve GitHub kullanıcı adınızı sorar.
-Zaten kurulu bileşenleri otomatik atlar (tekrar çalıştırılabilir).
+*(Eğer betik `newgrp docker` veya oturumu kapatıp açmanızı isterse mutlaka yapın).*
 
-## Ne Kurulur?
+### 2. Sistemi Ayağa Kaldırmak (Docker Compose)
 
-| Bileşen | Açıklama |
-|---|---|
-| Swap 8 GB | LLM inference için gerekli |
-| ROS2 Humble | Robot framework |
-| Gazebo Classic 11 | Simülasyon ortamı |
-| MoveIt2 | Hareket planlama |
-| UR5e Workspace | Simülasyon starter kit |
-| Docker + NVIDIA Toolkit | Container'lı çalışma |
-| Ollama | Yerel LLM inference |
-| Conda (a4) | Python 3.11 ortamı |
-| SSH + GitHub | Repo erişimi |
-
-## Kurulum Sonrası Test
+Tüm simülasyon, test ortamı ve yapay zeka altyapısını başlatmak için:
 
 ```bash
-# Yeni terminal aç, sonra:
-
-# UR5e simülasyon
-ros2 launch ur_simulation_gazebo ur_sim_moveit.launch.py ur_type:=ur5e
-
-# Docker GPU
-docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
-
-# LLM modeli çek
-ollama pull codellama:7b-code
+docker compose up --build
 ```
 
-## Branch Yapısı
+Bu komut 3 adet konteyner ayağa kaldırır:
+1. `sim`: UR5e, Gazebo, ROS2 ve MoveIt2.
+2. `ollama`: Yerel yapay zeka motoru.
+3. `testrunner`: Python ile yazılmış test scriptlerini çalıştıracağınız izole alan.
 
+---
+
+## 3. Doğrulama (Starter Kit Testleri)
+
+Sistem ayağa kalktıktan sonra, projenin doğru çalıştığını test etmek için:
+
+**A. UR5e Gazebo Simülasyonunu Açmak:**
+```bash
+# Host terminalinde X11 görüntü aktarımına izin ver:
+xhost +local:docker
+
+# Simülasyonu başlat:
+docker compose exec sim bash -c "ros2 launch ur_simulation_gazebo ur_sim_moveit.launch.py ur_type:=ur5e"
 ```
-main ──────── stabil, birleşik
-  └── dev ──── günlük entegrasyon
-        ├── a4/tofiq ── adversarial test
-        └── a2/elvin ── safety supervisor
+
+**B. Ollama LLM Testi:**
+```bash
+# Ollama'dan Llama3 (veya codellama) modelini çekin:
+docker compose exec ollama ollama pull codellama:7b-code
+
+# Modelin çalıştığını teyit edin:
+curl -X POST http://localhost:11434/api/generate -d '{"model":"codellama:7b-code","prompt":"python hello world print"}'
 ```
 
-**Çalışma akışı:** Kendi branch'inizde geliştirin → PR ile `dev`'e merge edin.
+---
 
-## Sorun mu var?
+## Geliştirme Akışı
 
-Script sonunda **DOĞRULAMA RAPORU** gösterir. ❌ olan maddelerin yanında FIX komutu yazar.
-
-Hâlâ sorun varsa GitHub Issues'ta bildirin.
+Projenizin kaynak kodları (`src/`, `data/`) yerel bilgisayarınızdaki klasörlerle **eşzamanlı (volume mapping)** olarak konteynerlere bağlıdır.
+- Kodlarınızı kendi IDE'nizle (VS Code vb.) dışarıda düzenleyebilirsiniz.
+- Çalıştırmak için `docker compose exec testrunner ...` komutlarını kullanabilirsiniz.

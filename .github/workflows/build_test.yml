@@ -1,4 +1,4 @@
-name: ROS2 Build & Test
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,36 +7,6 @@ on:
     branches: [main, dev]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-22.04
-    container:
-      image: osrf/ros:humble-desktop
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          apt-get update
-          apt-get install -y python3-pip python3-colcon-common-extensions
-          rosdep update
-          rosdep install --from-paths src --ignore-src -r -y || true
-
-      - name: Build
-        run: |
-          source /opt/ros/humble/setup.bash
-          colcon build --symlink-install
-        shell: bash
-
-      - name: Test
-        run: |
-          source /opt/ros/humble/setup.bash
-          source install/setup.bash
-          colcon test
-          colcon test-result --verbose
-        shell: bash
-
   lint:
     runs-on: ubuntu-22.04
     steps:
@@ -44,7 +14,60 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Lint
+      - name: Install Linting Tools
         run: |
           pip install flake8
+      - name: Lint Python Code
+        run: |
           flake8 src/ --max-line-length=120 --ignore=E501,W503
+
+  docker-build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Simulation Image
+        run: docker compose build sim
+
+      - name: Build TestRunner Image
+        run: docker compose build testrunner
+
+  security-scan:
+    needs: docker-build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Bild them locally first so they can be scanned
+      - name: Build Images for Scanning
+        run: |
+          docker compose build sim
+          docker compose build testrunner
+
+      - name: Run Trivy Vulnerability Scanner (TestRunner)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'llm-adversarial-robot-test-testrunner:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Syft SBOM Generator
+        uses: anchore/sbom-action@v0
+        with:
+          image: 'llm-adversarial-robot-test-testrunner:latest'
+          format: 'cyclonedx-json'
+          output-file: 'sbom-testrunner.json'
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-testrunner
+          path: sbom-testrunner.json

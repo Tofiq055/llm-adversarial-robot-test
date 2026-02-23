@@ -1,19 +1,56 @@
+version: '3.8'
+
 services:
-  ur5e-sim:
-    build: .
+  # Container A: Gazebo Simulation + ROS2
+  sim:
+    build:
+      context: .
+      dockerfile: Dockerfile.sim
+    container_name: a4_sim
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
       - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./data:/ws/data
-      - ./.env:/ws/.env
+      - ./src:/ws/src
     network_mode: host
-    command: >
-      bash -c "
-        source /opt/ros/humble/setup.bash &&
-        source /ws/install/setup.bash &&
-        ros2 launch llm_adversarial_test ur5e_sim.launch.py
-      "
+    tty: true
+
+  # Container B: Local LLM Engine (Ollama)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: a4_ollama
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  # Container C: Prompt Generator & Test Runner
+  testrunner:
+    build:
+      context: .
+      dockerfile: Dockerfile.testrunner
+    container_name: a4_testrunner
+    environment:
+      - OLLAMA_HOST=http://127.0.0.1:11434
+    volumes:
+      - ./data:/app/data
+      - ./src/llm_adversarial_test/scripts:/app/scripts
+      - ./.env:/app/.env
+    network_mode: host
+    depends_on:
+      - ollama
+      - sim
+    tty: true
+
+volumes:
+  ollama_models:
