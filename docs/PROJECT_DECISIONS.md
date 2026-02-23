@@ -181,6 +181,7 @@ Diğer her şey (ROS2, Gazebo, Python, Ollama, MoveIt2...) Docker konteynerleri 
 | 9 | `dolphin-mistral:7b` modeli indirildi | 2026-02-23 | 4.1 GB, sansürsüz, Q4_0 quantization |
 | 10 | `hello_llm.py` — TestRunner→Ollama bağlantı testi | 2026-02-23 | ✅ Başarılı: "Prepared, Captain!" yanıtı alındı |
 | 11 | **A4 Adım 1:** 3 robot görevi tanımlandı | 2026-02-23 | `data/tasks/ur5e_tasks.yaml` — pose, waypoint, pick-place |
+| 12 | **Starter Kit:** Gazebo + ros2_control + MoveIt2 + rosbag2 | 2026-02-23 | ✅ Tümü çalışıyor. 10s rosbag2 kaydı alındı (740K) |
 
 ### 🔲 Devam Eden / Planlanan Adımlar
 
