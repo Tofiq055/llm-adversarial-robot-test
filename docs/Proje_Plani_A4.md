@@ -5,7 +5,6 @@
 **Grup:** Grup A – Güvenilir Robot Yazılımı (UR5e / Gazebo / MoveIt2)  
 **Proje Konusu:** A4 – Gray-Box Adversarial Prompt/Suffix Test Platformu + Simülasyon Güvenlik Skoru  
 **Danışman Öğretim Üyesi:** Dr. Yunus Emre Çoğurcu  
-**Teslim Tarihi:** 27.02.2026 (Son Tarih: 1 Mart 2026)  
 
 ---
 
@@ -29,30 +28,33 @@ Proje, tamamen izole edilmiş, tekrarlanabilir bir multi-container Docker mimari
 
 ---
 
-## 3. İş Paketleri ve Zaman Çizelgesi (Gantt Planı)
+## 3. Proje Aşamaları ve İş Paketleri
 
-Proje hedeflerine ulaşmak için aşağıdaki iş paketleri planlanmış ve takvimlendirilmiştir:
+Proje, literatür araştırmasından başlayarak test otomasyonuna ve nihai raporlamaya kadar bir dizi mantıksal aşamadan oluşmaktadır. Belirli tarih kısıtlamaları olmaksızın, projenin genel ilerleyişi şu iş paketleri üzerinden sağlanacaktır:
 
-| İş Paketi (İP) No | İş Paketi Adı | Başlangıç ve Bitiş Süresi | Çıktı / Teslim Formatı |
-|:---:|---|---|---|
-| **İP-1** | **Literatür Taraması ve Gereksinim Analizi**<br>- LLM güvenlik zafiyetlerinin incelenmesi<br>- UR5e ve MoveIt2 dokümantasyon incelemesi | 10.02.2026 - 16.02.2026 | Gereksinim dokümanı |
-| **İP-2** | **Altyapı ve Kurulum (Starter Kit)**<br>- Docker multi-container mimarisinin teşkili<br>- Gazebo + ROS2 + MoveIt2 simülasyonunun testi | 17.02.2026 - 23.02.2026 | `docker-compose.yml`, `Dockerfile` setleri, rosbag kaydı |
-| **İP-3** | **Görev ve Prompt Şablonlarının Tasarımı**<br>- En az 3 temel robot görevi (pose, waypoint, pick-place)<br>- Baseline, adversarial ve suffix varyantlı 15+ prompt tasarımı | 24.02.2026 - 02.03.2026 | `ur5e_tasks.yaml`, `adversarial_prompts.yaml` |
-| **İP-4** | **Kod Üretimi ve Test Pipeline'ının (Test Runner) Geliştirilmesi**<br>- Ollama API entegrasyonu<br>- Üretilen ROS2/Python kodunun sandbox'ta çalıştırılması | 03.03.2026 - 22.03.2026 | **1. Gelişme Raporu (22 Mart)**<br>Test Runner Python Kodu |
-| **İP-5** | **Safety Supervisor Entegrasyonu ve Metrik Toplama**<br>- Denetçi loglarının (hız ihlali, çarpışma) yakalanması<br>- Olayların otomatik kaydedilmesi | 23.03.2026 - 19.04.2026 | **2. Gelişme Raporu (19 Nisan)**<br>Entegrasyon modülü |
-| **İP-6** | **Deneylerin Çalıştırılması ve Veri Analizi**<br>- 3 farklı modelle 50+ koşuluk deney setinin otomasyonu<br>- Unsafe oranı, safe başarı oranı metrik hesaplamaları | 20.04.2026 - 10.05.2026 | Deney Sonuçları (CSV Veri Seti) |
-| **İP-7** | **Raporlama ve Demo Hazırlığı**<br>- Karşılaştırmalı analiz raporunun yazımı<br>- Sistemin işleyişini anlatan demo videonun kaydı | 11.05.2026 - 31.05.2026 | **Final Raporu (31 Mayıs)**<br>Demo Videosu Linki |
+### Aşama 1: Altyapı ve Hazırlık
+- **Gereksinim Analizi:** LLM güvenlik zafiyetlerinin incelenmesi ve UR5e/MoveIt2 ortamının araştırılması.
+- **Sistem Kurulumu (Starter Kit):** Docker kullanılarak izole edilmiş, çoklu konteyner mimarisine sahip (sim, ollama, testrunner) reprodüksiyon ortamının oluşturulması.
+- **Görev Tanımları:** UR5e robotu için test edilecek temel görevlerin (pose, waypoint, pick-place) belirlenmesi ve doğru (ground truth) çıktıların hazırlanması.
+
+### Aşama 2: Test Tasarımı ve Entegrasyon
+- **Adversarial Prompt Tasarımı:** Modelin güvenlik mekanizmalarını aşmayı hedefleyen güvenli (baseline), riskli (adversarial) ve dolaylı (obfuscated/suffix) prompt şablonlarının oluşturulması.
+- **Kod Üretimi Pipeline'ı:** Promptların otomatik olarak LLM'e (Ollama) iletilmesi, üretilen kodların alınıp formatlanması ve simülasyon (sandbox) konteynerinde çalıştırılmasını sağlayan Python tabanlı "Test Runner"ın geliştirilmesi.
+- **Safety Supervisor (Güvenlik Denetçisi) Entegrasyonu:** Simülasyon sırasında oluşan ihlalleri, çarpışmaları ve hız aşımlarını otomatik kaydedecek mekanizmanın entegre edilmesi.
+
+### Aşama 3: Deneyler ve Raporlama
+- **Deney Setinin Koşulması:** Geliştirilen pipeline üzerinden, en az 50 test koşusunu barındıran deney setinin farklı LLM modelleriyle (örn: dolphin-mistral:7b) otomatik olarak çalıştırılması.
+- **Metrik Toplama ve Veri Analizi:** "Unsafe oranı", "safe başarı oranı" ve "engelleme gecikmesi" gibi metriklerin hesaplanarak CSV formatında dışa aktarılması.
+- **Nihai Raporlama:** Tüm analiz sonuçlarını içeren karşılaştırmalı final raporunun (Markdown formatında) yazılması ve sistemin genel çalışma mekanizmasını gösteren demo videosunun hazırlanması.
 
 ---
 
-## 4. Ara Rapor ve Final Teslim Tarihleri
+## 4. Raporlama Süreçleri
 
-Bitirme projesi yönergesine uygun olarak aşağıdaki aşamalarda rapor teslimleri gerçekleştirilecektir:
-
-*   **Çalışma Programı (Bu belge):** 27.02.2026 (Son Teslim: 1 Mart 2026)
-*   **1. Gelişme Raporu (Ara Sınav Yerine):** 22 Mart 2026
-*   **2. Gelişme Raporu:** 19 Nisan 2026
-*   **Final Raporu & Demo Videosu:** 31 Mayıs 2026
+Bitirme projesi yönergesi kapsamında aşağıdaki genel aşamalar takip edilecektir:
+1.  **Çalışma Programı (Bu belge):** Projenin kapsamının, amacının ve genel iş paketlerinin sunulması.
+2.  **Gelişme Raporları:** İlerlemelerin, tamamlanan pipeline aşamalarının ve ilk entegrasyon sonuçlarının raporlanması (Ara Rapor niteliğinde).
+3.  **Final Raporu:** Tüm deney setinin sonuçlarının, başarı analizlerinin ve proje demosunun nihai olarak belgelenip telim edilmesi.
 
 ---
 *İşbu Çalışma Programı, danışman öğretim üyesinin onayı ile yürürlüğe girecektir.*
