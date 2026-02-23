@@ -164,13 +164,33 @@ Diğer her şey (ROS2, Gazebo, Python, Ollama, MoveIt2...) Docker konteynerleri 
 
 ---
 
-## 9. Sonraki Adımlar (TODO)
+## 9. İlerleme Takibi
 
-- [ ] `dolphin-mistral:7b` modelini Ollama'ya indirmek
-- [ ] `hello_llm.py` test betiğini çalıştırıp bağlantıyı doğrulamak
-- [ ] UR5e Gazebo simülasyonunu Container A içinde başlatıp doğrulamak
-- [ ] Adversarial prompt şablonlarını tasarlamak (`data/prompts/`)
-- [ ] Test pipeline'ını kodlamak (prompt → LLM → kod üretimi → simülasyon → metrik)
-- [ ] Safety Supervisor (A2 - Elvin) entegrasyonu
-- [ ] 50+ koşuluk deney seti çalıştırmak
-- [ ] Karşılaştırmalı rapor üretmek (CSV + Markdown)
+### ✅ Tamamlanan Adımlar
+
+| # | Görev | Tamamlanma Tarihi | Notlar |
+|---|---|---|---|
+| 1 | Monolitik `setup.sh` silindi, `setup_host.sh` yazıldı | 2026-02-23 | Host'ta sadece Docker + NVIDIA kalıyor |
+| 2 | `Dockerfile.sim` oluşturuldu (multi-stage) | 2026-02-23 | ROS2 + Gazebo + UR5e + MoveIt2 |
+| 3 | `Dockerfile.testrunner` oluşturuldu | 2026-02-23 | Python 3.11 sandbox, non-root user |
+| 4 | `docker-compose.yml` — 3 servis | 2026-02-23 | sim, ollama, testrunner |
+| 5 | Branch yapısı kuruldu | 2026-02-23 | main, dev, a1-a2/elvin, a3/kamal, a4/tofiq |
+| 6 | CI/CD güncellendi | 2026-02-23 | Trivy + Syft + Docker build |
+| 7 | README.md + SETUP.md güncellendi | 2026-02-23 | Yeni mimari diyagram + Docker-first rehber |
+| 8 | Ollama VRAM koruma ayarları eklendi | 2026-02-23 | `OLLAMA_NUM_PARALLEL=1`, `OLLAMA_MAX_LOADED_MODELS=1` |
+| 9 | `dolphin-mistral:7b` modeli indirildi | 2026-02-23 | 4.1 GB, sansürsüz, Q4_0 quantization |
+| 10 | `hello_llm.py` — TestRunner→Ollama bağlantı testi | 2026-02-23 | ✅ Başarılı: "Prepared, Captain!" yanıtı alındı |
+
+### 🔲 Devam Eden / Planlanan Adımlar
+
+| # | Görev | Öncelik | Durum |
+|---|---|---|---|
+| 11 | UR5e Gazebo simülasyonu doğrulama (Container A) | Yüksek | Beklemede |
+| 12 | Adversarial prompt şablonları tasarımı (`data/prompts/`) | Yüksek | Beklemede |
+| 13 | Test pipeline kodlama (prompt → LLM → kod → simülasyon → metrik) | Yüksek | Beklemede |
+| 14 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Orta | Beklemede |
+| 15 | Safety Supervisor entegrasyonu (A2 - Elvin) | Orta | Beklemede |
+| 16 | 50+ koşuluk deney seti çalıştırma | Orta | Beklemede |
+| 17 | Karşılaştırmalı rapor üretme (CSV + Markdown) | Düşük | Beklemede |
+| 18 | Çalışma Programı dokümanı hazırlama | 🔴 ACİL | Son tarih: 27.02.2026 |
+
