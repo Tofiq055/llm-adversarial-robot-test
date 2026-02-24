@@ -49,6 +49,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./src/llm_adversarial_test/scripts:/app/scripts
+      - ./src/llm_adversarial_test/tests:/app/tests
       - ./.env:/app/.env
     network_mode: host
     depends_on:
