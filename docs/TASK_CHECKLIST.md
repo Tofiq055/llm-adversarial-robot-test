@@ -21,7 +21,8 @@
 - [x] **EK ADIM:** Gemini ile 50 adet yeni "obfuscated" prompt üretilip toplam sayı 65'e çıkarıldı.
 
 ## A4 Adım 3: LLM Model Eğitimi (Fine-Tuning) ve Simülasyon Pipeline
-- [ ] ROS2, MoveIt2 ve UR5e kodlarından eğitim veri seti (dataset) oluştur
+- [x] 65 adetlik geniş prompt setiyle `deepseek-coder:6.7b` modelini çalıştırıp ilk CSV raporunu üret (Baseline Test)
+- [ ] ROS2 Github Repolarından Script kazıma (veri seti) Python aracı yazılacak ve veriler toplanacak
 - [ ] Donanım kısıtlarına uygun şekilde modeli eğit (Unsloth / LoRA adaptasyonu)
 - [ ] Eğitilen modeli GGUF formatına dönüştürüp **Hugging Face**'e yükle (Hoca talebi)
 - [x] `test_runner.py` — YAML'dan prompt okuyan altyapı (6/6 test)
