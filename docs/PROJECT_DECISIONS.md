@@ -254,15 +254,17 @@ Böylece `adversarial_prompts.yaml` içindeki test senaryosu sayısı, manuel ol
 ## 13. Açık Kaynak LLM Fine-Tuning & Hugging Face (Yeni Hoca Talebi)
 **Karar tarihi:** 2026-02-24
 
-**Problem:** Danışman hoca (Yunus Emre), A4 projesinin sadece hazır modelleri test etmekten (prompting / zayıf modellerde statik analiz) ibaret kalmasını istemediğini, 7B veya dengi bir modelin "ROS2 ve UR5e kodlarıyla eğitilerek (Fine-Tuning)" büyük modellere ne kadar yaklaşabildiğinin asıl benchmark konusu olmasını istedi. Eğitilen (Fine-tuned) modelin akademik bir referans olması için **Hugging Face**'e yüklenmesi ve adversarial testlerin (kod çalıştırma dâhil) bu model üzerinde yapılması istendi.
+**Problem:** Danışman hoca (Yunus Emre), A4 projesinin sadece hazır modelleri test etmekten (prompting / zayıf modellerde statik analiz) ibaret kalmasını istemediğini, "ROS2 ve UR5e kodlarıyla eğitilerek (Fine-Tuning)" büyük modellere ne kadar yaklaşabildiğinin asıl benchmark konusu olmasını istedi. Eğitilen (Fine-tuned) modelin akademik bir referans olması için **Hugging Face**'e yüklenmesi ve adversarial testlerin (kod çalıştırma dâhil) bu model üzerinde yapılması istendi.
+**Hocanın Kesin Kuralı:** Kesinlikle ücretli API (OpenAI vs.) kullanılmayacak, eğitim süreci %100 Açık Kaynaklı (Open Source) modellerle ve donanım yettiği sürece yerel (Lokal) şartlarda yapılacak.
 
-**Kısıtlar:** Eğitimin yapılacağı cihazın **RTX 3060 Laptop (6GB VRAM)** GPU'suna sahip olması donanımsal bir darboğazdır. 7B parametreli bir modeli standart yöntemlerle eğitmek 24GB+ VRAM gerektirir.
+**Kısıtlar (Laptop - 6GB VRAM):** 7B parametreli bir modeli fine-tune etmek çok fazla VRAM (%24GB+) gerektirir. 6 GB VRAM ile "Açık Kaynak, Yerel ve Bedava" kuralını ihlal etmeden modeli nasıl eğiteceğiz?
 
-**Stratejik Çözüm (6GB VRAM için QLoRA + Unsloth):**
-Hocanın "Zoru Seçelim" talebi doğrultusunda şu karar alınmıştır:
-1. **Veri Seti (Dataset):** GitHub üzerinden ROS2, MoveIt2 ve UR5e Python kontrol scriptleri toplanarak bir `Instruction/Response` dataseti oluşturulacak.
-2. **Eğitim (Fine-Tuning):** 6GB VRAM sınırını aşmamak için **Unsloth** kütüphanesi ve **QLoRA (4-bit quantize edilmiş Low-Rank Adaptation)** kullanılacak. Model olarak da kodlamada usta olan `Qwen2.5-Coder-3B` veya `DeepSeek-Coder-6.7B` tercih edilecek. Eğer 6GB VRAM yine de yetmezse, Google Colab (Ücretsiz T4 GPU) üzerinden tamamen aynı Unsloth pipeline'ı koşturulacaktır.
-3. **Dağıtım (Hugging Face):** Fine-tune edilen LoRA ağırlıkları model ile birleştirilip GGUF formatına (Ollama ile uyumlu) dönüştürülecek ve Tofiq'in Hugging Face hesabında yayınlanacaktır (Hocanın beklentisi karşılanmış olacaktır).
-4. **Deney:** Ollama üzerinden bu "Hugging Face" modelimiz indirilerek test runner'a bağlanacak ve kodlar Statik Analiz'de bırakılmadan, gerçek Gazebo simülasyonuna gönderilip çalıştırılacaktır.
+**Stratejik Çözüm (6GB VRAM, Pürüzsüz Lokal QLoRA):**
+1. **Model Seçimi (Açık Kaynak + Lokal):** Eğitim için 7B yerine, laptopumuzun VRAM'ine tam sığacak ve kodlamada zeka küpü olan **Açık Kaynaklı (Open Weights)** 1.5B veya 3B modellerden birini kullanacağız:
+   - `Qwen2.5-Coder-1.5B` veya `3B` (Alibaba - En iyi küçük Coder)
+   - `Llama-3.2-1B` veya `3B` (Meta)
+2. **Eğitim Tekniği (Unsloth + QLoRA):** Modelleri bilgisayarına (RTX 3060) kuracağımız Unsloth kütüphanesi ve QLoRA tekniğiyle, sadece 5GB ile 5.5GB arası VRAM tüketerek (tam sınırlarda) ROS2 ve UR5e Python kodlarıyla %100 yerel, internetsiz (indirme sonrası) ve API'siz eğiteceğiz.
+3. **Dağıtım (Hugging Face):** Lokal olarak eğittiğimiz ağırlıkları standart bir GGUF dosyasına çevireceğiz (ücretsiz) ve Hugging Face platformuna "Açık Kaynak Model Olarak" yükleyeceğiz. (Dışarıdan kimse bunun 6GB VRAM laptop ile yapıldığını anlayamaz, oldukça profesyonel görünür.)
+4. **Deney:** Bu modeli yine kendi bilgisayarımızdaki Ollama altyapısında çalıştırarak (Hocanın beklentisi), simülasyon üzerinden güvenlik testimize sokacağız.
 
 
