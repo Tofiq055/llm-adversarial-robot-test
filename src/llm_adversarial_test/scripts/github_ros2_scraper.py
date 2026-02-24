@@ -14,9 +14,13 @@ import json
 import requests
 import time
 from typing import List, Dict
+from dotenv import load_dotenv
+
+# .env dosyasını yükle (Aynı dizinde veya proje kök dizininde arar)
+load_dotenv()
 
 # GitHub API rate limitlerini aşmamak için kişisel token
-# Export GITHUB_TOKEN="ghp_xxxxxx..."
+# .env veya terminal üzerinden GITHUB_TOKEN aranır
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 HEADERS = {
@@ -27,7 +31,8 @@ if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Arama sorgusu: Python dosyaları, içinde rclpy ve moveit geçmeli
-SEARCH_QUERY = "rclpy moveit language:python"
+# Kalite kontrolü: Sadece en az 5 yıldız (stars:>5) almış güvenilir repolardan ara!
+SEARCH_QUERY = "rclpy moveit language:python stars:>5"
 
 def search_github_files(query: str, max_results: int = 100) -> List[Dict]:
     """GitHub API üzerinden belirtilen sorguya uygun dosyaları arar."""
