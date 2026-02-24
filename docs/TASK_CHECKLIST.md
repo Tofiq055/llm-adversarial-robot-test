@@ -44,3 +44,10 @@
 - [ ] Sonuçları CSV olarak kaydet
 - [ ] Özet rapor (Markdown) oluştur
 - [ ] Demo videosu çek
+
+---
+## 🛠️ A4 Unsloth & QLoRA Altyapı Kurulumu (Yeni)
+- [ ] Python sanal ortamı (`venv` veya `conda`)uşturulacak
+- [ ] `torch`, `unsloth`, `trl`, `peft` kütüphaneleri kurulacak
+- [ ] Hugging Face hesabı ile login (`huggingface-cli login`) işlemi yapılacak
+- [ ] ROS2 Github Repolarından Script kazıma (veri seti) Python aracı yazılacak
