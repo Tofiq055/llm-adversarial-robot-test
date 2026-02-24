@@ -90,6 +90,14 @@ main ─────────────────────────
 | Python | 3.11 |
 | LLM | Local (Ollama) |
 
+## Features
+
+### Dataset Generation (A4)
+- **GitHub ROS2 Code Scraper:** A specialized script (`github_ros2_scraper.py`) designed to build high-quality datasets for LLM fine-tuning.
+  - **Pagination:** Automatically parses through pages yielding up to 300 Python files per run.
+  - **Quality Filtering:** Enforces a minimum 5-star repository threshold ensuring high-grade code.
+  - **Output Format:** Generates data in `ros2_dataset.jsonl` (JSON Lines format) specifically structured for instruct-tuning models like Qwen2.5-Coder.
+
 ## Installation
 
 ```bash
