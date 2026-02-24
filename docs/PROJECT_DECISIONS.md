@@ -229,11 +229,12 @@ Sadece tek bir modele saldırmak projenin bilimsel tezini zayıf kılar. Farklı
 
 | # | Görev | Öncelik | Durum |
 |---|---|---|---|
-| 18 | Pipeline'ın gerçek Ollama modeli ile uçtan uca çalıştırılması | Yüksek | Sırada |
-| 19 | **A4 Adım 4:** Safety supervisor entegrasyonu (Elvin ile) | Orta | Beklemede |
-| 20 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
-| 21 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
-| 22 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
+| 18 | **A4 Adım 3 (Ek):** 65 promptluk geniş seti `deepseek-coder:6.7b` ile çalıştırıp ilk CSV raporunu alma | Yüksek | Sırada |
+| 19 | **A4 Adım 3 (Ek):** ROS2 Github script kazıma aracı ile eğitim veri seti oluşturulması | Yüksek | Sırada |
+| 20 | Pipeline'ın gerçek Ollama modeli ile uçtan uca çalıştırılması | Yüksek | Sırada |
+| 21 | **A4 Adım 4:** Safety supervisor entegrasyonu (Elvin ile) | Orta | Beklemede |
+| 22 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
+| 23 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
 
 ---
 
