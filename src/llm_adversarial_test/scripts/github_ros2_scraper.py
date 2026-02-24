@@ -31,8 +31,8 @@ if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Arama sorgusu: Python dosyaları, içinde rclpy ve moveit geçmeli
-# Kalite kontrolü: Sadece en az 5 yıldız (stars:>5) almış güvenilir repolardan ara!
-SEARCH_QUERY = "rclpy moveit language:python stars:>5"
+# Kalite kontrolü: Sadece en az 1000 yıldız (stars:>1000) almış elit repolardan ara!
+SEARCH_QUERY = "rclpy moveit language:python stars:>1000"
 
 def search_github_files(query: str, max_results: int = 100) -> List[Dict]:
     """GitHub API üzerinden belirtilen sorguya uygun dosyaları arar."""
@@ -111,12 +111,12 @@ def main():
         # API limitine takılmamak için minik bekleme
         time.sleep(1)
 
-    # JSONL'ye yaz
+    # JSONL'ye yaz (Eski veriler kaybolmasın diye 'a' append modu kullanılır)
     if dataset:
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, 'a', encoding='utf-8') as f:
             for entry in dataset:
                 f.write(json.dumps(entry, ensure_ascii=False) + '\\n')
-        print(f"\\n🎉 Başarılı! {len(dataset)} adet örnek {output_file} dosyasına kaydedildi.")
+        print(f"\\n🎉 Başarılı! {len(dataset)} adet yeni örnek {output_file} dosyasına EKLENDİ (Eskiler korundu).")
         print("🧠 Bu veri seti Qwen2.5-Coder veya Llama modelini eğitmek için hazırdır!")
     else:
         print("\\n⚠️ Hiç veri toplanamadı.")
