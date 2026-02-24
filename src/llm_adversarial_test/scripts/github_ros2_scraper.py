@@ -31,8 +31,11 @@ if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Arama sorgusu: Python dosyaları, içinde rclpy ve moveit geçmeli
-# Kalite kontrolü: En az 25 yıldız (stars:>25) almış repolardan ara!
-SEARCH_QUERY = "rclpy moveit language:python stars:>25"
+# Not: GitHub Code Search API aramada 'stars' filtresini desteklemez.
+# Kalite kontrolü script içinde ayrı API isteği ile yapılacaktır.
+SEARCH_QUERY = "rclpy moveit language:python"
+
+MIN_STARS = 25
 
 def search_github_files(query: str, max_results: int = 100) -> List[Dict]:
     """GitHub API üzerinden belirtilen sorguya uygun dosyaları arar."""
@@ -61,6 +64,14 @@ def download_file_content(download_url: str) -> str:
         return response.text
     return ""
 
+def check_repo_stars(repo_full_name: str, headers: Dict) -> int:
+    """GitHub API üzerinden deponun güncel yıldız sayısını döndürür."""
+    repo_url = f"https://api.github.com/repos/{repo_full_name}"
+    resp = requests.get(repo_url, headers=headers)
+    if resp.status_code == 200:
+        return resp.json().get("stargazers_count", 0)
+    return 0
+
 def generate_instruction_for_code(code: str, filename: str) -> str:
     """
     Geçici olarak statik, ileride Gemini/Claude ile dinamik üretilecek
@@ -85,6 +96,14 @@ def main():
         # Repositorie URL'sinden raw URL'sini parse edelim
         repo_name = item['repository']['full_name']
         file_path = item['path']
+        
+        # Repo yıldız sayısını kontrol et
+        stars = check_repo_stars(repo_name, HEADERS)
+        if stars < MIN_STARS:
+            print(f"      [{stars} yıldız] {MIN_STARS} yıldızdan düşük = Atlanıyor.")
+            continue
+        
+        print(f"      ⭐ Repo kalitesi onaylandı: {stars} yıldız")
         
         # API üzerinden içeriği çek (base64)
         content_url = item['url']
