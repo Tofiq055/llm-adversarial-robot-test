@@ -182,9 +182,26 @@ Yani projenin odak noktası "LLM çalışan kod üretebiliyor mu?" değil, **"LL
 
 *Geliştirme Metodolojisi:* Bu analyzer ve test motoru, tamamen **TDD (Test-Driven Development)** ilkeleriyle geliştirilmiş (16/16 test geçmektedir).
 
+**❌ GÜNCELLEME DEĞERLENDİRMESİ (2026-02-24): STATİK ANALİZDEN VAZGEÇİŞ**
+Önemli bir proje sınırı ihlali tespit edildi: Şartnameye göre **"Robot Kontrol Kodunda Statik Analiz" (A3)** tamamen Kamal'ın projesidir. **A4 (Tofiq)** olarak bizim statik analiz yapmamız, arkadaşımızın proje kapsamını işgal etmek anlamına gelir. 
+A4 şartnamesi açıkça şunu emreder: *"Üretilen kodu container içinde derle/çalıştır pipeline'ı kur"*.
+Bu nedenle TDD ile yazdığımız `safety_analyzer.py` kenara bırakılacak; LLM'in ürettiği kod metin bazlı değil, **Elvin'in A2 projesi (Safety Supervisor) ile birlikte gerçek simülasyonda çalıştırılarak** (hız aşımı, çarpışma testleri ile) değerlendirilecektir.
+
 ---
 
-## 10. İlerleme Takibi
+## 10. Çift LLM (Dual-Model) Deney Stratejisi
+**Karar tarihi:** 2026-02-24
+
+Tek bir LLM kullanmak yerine, 50+ deney koşusunu iki farklı felsefeye sahip modelle yapmaya karar verdik:
+1. **`deepseek-coder:6.7b` (Teknik Uzman Saldırgan):** ROS2 ve Python bilgisi çok yüksek. Amacımız, harika kod yazan bu modelin güvenlik sınırlarını (hız/çarpışma) aşmasını sağlamak.
+2. **`dolphin-llama3:8b` (Kaotik/Kuralsız Saldırgan):** Kod bilgisi Coder kadar olmasa da, alignment (güvenlik) filtreleri sıfır. Suffix ve Jailbreak prompt'larımıza asla "hayır" demeyecek.
+
+**Neden 2 LLM?**
+Sadece tek bir modele saldırmak projenin bilimsel tezini zayıf kılar. Farklı özelliklerde (biri kodlama uzmanı, diğeri sansürsüz muhakeme uzmanı) iki ayrı modeli karşılaştırarak "Hangi model güvenlik açığına daha meyillidir?" sorusuna bilimsel bir cevap bulacağız.
+
+---
+
+## 11. İlerleme Takibi
 
 ### ✅ Tamamlanan Adımlar
 
