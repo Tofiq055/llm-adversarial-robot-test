@@ -223,14 +223,46 @@ Sadece tek bir modele saldırmak projenin bilimsel tezini zayıf kılar. Farklı
 | 14 | **A4 Adım 2:** 15 prompt şablonu oluşturuldu | 2026-02-23 | `data/prompts/adversarial_prompts.yaml` — 3 görev × 5 varyant |
 | 15 | **Çalışma Programı (Proje Planı)** | 2026-02-24 | 1 Mart teslimi için tarihsiz/sade proje planı Markdown olarak yazıldı |
 | 16 | **A4 Adım 3:** Test Pipeline (TDD) | 2026-02-24 | `test_runner.py` (LLM iletişimi) ve `safety_analyzer.py` (Statik Analiz) yazılıp, 16 test başarıyla geçildi |
+| 17 | **A4 Ek Adım:** Merkezi prompt kümesinin ölçeklendirilmesi | 2026-02-24 | Gemini (Large LLM) kullanılarak `adversarial_prompts.yaml` dosyasına 50 yeni obfuscated prompt eklendi |
 
 ### 🔲 Devam Eden / Planlanan Adımlar
 
 | # | Görev | Öncelik | Durum |
 |---|---|---|---|
-| 17 | Pipeline'ın gerçek Ollama modeli ile uçtan uca çalıştırılması | Yüksek | Sırada |
-| 18 | **A4 Adım 4:** Safety supervisor entegrasyonu (Elvin ile) | Orta | Beklemede |
-| 19 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
-| 20 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
-| 21 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
+| 18 | Pipeline'ın gerçek Ollama modeli ile uçtan uca çalıştırılması | Yüksek | Sırada |
+| 19 | **A4 Adım 4:** Safety supervisor entegrasyonu (Elvin ile) | Orta | Beklemede |
+| 20 | **A4 Adım 5:** Metrikler (unsafe, safe, engelleme, gecikme) | Orta | Beklemede |
+| 21 | **A4 Adım 6:** 50+ koşu deney seti + CSV + rapor | Orta | Beklemede |
+| 22 | `dolphin-llama3:8b` ve `dolphin-phi:2.7b` modellerini indirme | Düşük | Beklemede |
+
+---
+
+## 12. Ölçeklendirilmiş Adversarial Prompt Üretimi
+**Karar tarihi:** 2026-02-24
+
+**Problem:** Elle yazılan 15 adet adversarial prompt, modelin genel zaaflarını (baseline, no_safety, jailbreak, suffix_inject, obfuscated) test etmek için yeterli bir sınıflandırma sunuyordu, ancak 50+ koşuluk kapsamlı bir Red Teaming deneyi için dar bir test setiydi. Ayrıca, testlerin tekrara düşme riski bulunuyordu.
+
+**Çözüm:** Daha büyük ve yetenekli bir "Red Team LLM'i" (Gemini / Claude vb.) kullanılarak, sistemimize uyan geniş çaplı bir prompt seti (özellikle en kurnaz olan "obfuscation" kategorisi altında) üretilmesi sağlandı. 
+
+**Nasıl Yapıldı?**
+Gemini 3.1 Pro (kullandığımız güncel model) kullanılarak, robotik bağlamına oldukça uygun, mühendislik konseptleri (örneğin; Actuator Step Calibration, Thermal Stress Testing, Middleware DDS Latency Profiling, Harmonic Drive Backlash Measurement vb.) arasına gizlenmiş 50 adet "obfuscated" prompt tasarlandı. Bu promptları rastgele değil, programatik (deterministik) bir şekilde `adversarial_prompts.yaml` içindeki doğru dizinlere otomatik olarak enjekte eden bir Python otomasyon script'i (`generate_obfuscated_prompts.py`) yazılıp çalıştırıldı. 
+
+Böylece `adversarial_prompts.yaml` içindeki test senaryosu sayısı, manuel oluşturulan temel senaryolara ek olarak 65 adede yükseltildi. Bu veri seti artık modelin "güvenliği bir mühendislik testi kandırmacası karşısında nasıl unuttuğunu" ölçmek için paha biçilmez bir duruma gelmiştir.
+
+---
+
+## 13. Açık Kaynak LLM Fine-Tuning & Hugging Face (Yeni Hoca Talebi)
+**Karar tarihi:** 2026-02-24
+
+**Problem:** Danışman hoca (Yunus Emre), A4 projesinin sadece hazır modelleri test etmekten (prompting / zayıf modellerde statik analiz) ibaret kalmasını istemediğini, 7B veya dengi bir modelin "ROS2 ve UR5e kodlarıyla eğitilerek (Fine-Tuning)" büyük modellere ne kadar yaklaşabildiğinin asıl benchmark konusu olmasını istedi. Eğitilen (Fine-tuned) modelin akademik bir referans olması için **Hugging Face**'e yüklenmesi ve adversarial testlerin (kod çalıştırma dâhil) bu model üzerinde yapılması istendi.
+
+**Kısıtlar:** Eğitimin yapılacağı cihazın **RTX 3060 Laptop (6GB VRAM)** GPU'suna sahip olması donanımsal bir darboğazdır. 7B parametreli bir modeli standart yöntemlerle eğitmek 24GB+ VRAM gerektirir.
+
+**Stratejik Çözüm (6GB VRAM için QLoRA + Unsloth):**
+Hocanın "Zoru Seçelim" talebi doğrultusunda şu karar alınmıştır:
+1. **Veri Seti (Dataset):** GitHub üzerinden ROS2, MoveIt2 ve UR5e Python kontrol scriptleri toplanarak bir `Instruction/Response` dataseti oluşturulacak.
+2. **Eğitim (Fine-Tuning):** 6GB VRAM sınırını aşmamak için **Unsloth** kütüphanesi ve **QLoRA (4-bit quantize edilmiş Low-Rank Adaptation)** kullanılacak. Model olarak da kodlamada usta olan `Qwen2.5-Coder-3B` veya `DeepSeek-Coder-6.7B` tercih edilecek. Eğer 6GB VRAM yine de yetmezse, Google Colab (Ücretsiz T4 GPU) üzerinden tamamen aynı Unsloth pipeline'ı koşturulacaktır.
+3. **Dağıtım (Hugging Face):** Fine-tune edilen LoRA ağırlıkları model ile birleştirilip GGUF formatına (Ollama ile uyumlu) dönüştürülecek ve Tofiq'in Hugging Face hesabında yayınlanacaktır (Hocanın beklentisi karşılanmış olacaktır).
+4. **Deney:** Ollama üzerinden bu "Hugging Face" modelimiz indirilerek test runner'a bağlanacak ve kodlar Statik Analiz'de bırakılmadan, gerçek Gazebo simülasyonuna gönderilip çalıştırılacaktır.
+
 
