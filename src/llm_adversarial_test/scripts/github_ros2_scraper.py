@@ -31,8 +31,8 @@ if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Arama sorgusu: Python dosyaları, içinde rclpy ve moveit geçmeli
-# Kalite kontrolü: Sadece en az 1000 yıldız (stars:>1000) almış elit repolardan ara!
-SEARCH_QUERY = "rclpy moveit language:python stars:>1000"
+# Kalite kontrolü: En az 25 yıldız (stars:>25) almış repolardan ara!
+SEARCH_QUERY = "rclpy moveit language:python stars:>25"
 
 def search_github_files(query: str, max_results: int = 100) -> List[Dict]:
     """GitHub API üzerinden belirtilen sorguya uygun dosyaları arar."""
