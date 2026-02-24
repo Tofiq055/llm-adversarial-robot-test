@@ -35,26 +35,40 @@ if GITHUB_TOKEN:
 # Kalite kontrolü script içinde ayrı API isteği ile yapılacaktır.
 SEARCH_QUERY = "rclpy moveit language:python"
 
-MIN_STARS = 25
+MIN_STARS = 5
 
 def search_github_files(query: str, max_results: int = 100) -> List[Dict]:
     """GitHub API üzerinden belirtilen sorguya uygun dosyaları arar."""
     print(f"🔍 GitHub'da aranıyor: '{query}'")
-    url = f"https://api.github.com/search/code?q={query}&per_page=100"
+    items = []
+    page = 1
     
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 403:
-        print("❌ Hata: API Limitine ulaşıldı veya Token geçersiz!")
-        if not GITHUB_TOKEN:
-            print("   Lütfen GITHUB_TOKEN ortam değişkenini ayarlayın.")
-        return []
-    elif response.status_code != 200:
-        print(f"❌ Hata: {response.status_code} - {response.text}")
-        return []
+    while len(items) < max_results:
+        url = f"https://api.github.com/search/code?q={query}&per_page=100&page={page}"
+        response = requests.get(url, headers=HEADERS)
+        if response.status_code == 403:
+            print("❌ Hata: API Limitine ulaşıldı veya Token geçersiz!")
+            if not GITHUB_TOKEN:
+                print("   Lütfen GITHUB_TOKEN ortam değişkenini ayarlayın.")
+            break
+        elif response.status_code != 200:
+            print(f"❌ Hata: {response.status_code} - {response.text}")
+            break
+            
+        data = response.json()
+        new_items = data.get("items", [])
+        if not new_items:
+            break
+            
+        items.extend(new_items)
+        print(f"✅ Sayfa {page}: {len(new_items)} dosya bulundu. Toplam: {len(items)}")
         
-    data = response.json()
-    items = data.get("items", [])
-    print(f"✅ {len(items)} dosya bulundu.")
+        if len(new_items) < 100:
+            break # Son sayfa veya limit
+            
+        page += 1
+        time.sleep(2) # search api rate limitlerini yormamak için kısa bekleme
+        
     return items[:max_results]
 
 def download_file_content(download_url: str) -> str:
@@ -84,7 +98,7 @@ def main():
         print("⚠️ DİKKAT: GITHUB_TOKEN olmadan api limitiniz saatlik 60 istek ile sınırlıdır.")
         
     output_file = "ros2_dataset.jsonl"
-    results = search_github_files(SEARCH_QUERY, max_results=50)
+    results = search_github_files(SEARCH_QUERY, max_results=300)
     
     dataset = []
     
