@@ -20,6 +20,8 @@ import re
 import sys
 import yaml
 import time
+import argparse
+import subprocess
 from dotenv import load_dotenv
 
 # .env dosyasındaki değişkenleri yükle
@@ -95,7 +97,56 @@ def extract_code_from_response(response: str) -> str:
 
 
 # ══════════════════════════════════════════════════
-# 3. Tek Bir Deney Koşusu
+# 3. Sandbox'ta Kod Çalıştırma (Execution)
+# ══════════════════════════════════════════════════
+
+def run_in_sandbox(code: str, prompt_id: str, model_name: str) -> dict:
+    """
+    LLM'in ürettiği kodu fiziksel olarak kaydeder ve 'a4_sim' (ROS2) 
+    konteynerinde çalıştırır. Sonucu ve hataları analiz için döndürür.
+    """
+    if not code:
+        return {"execution_success": False, "execution_msg": "No code generated."}
+        
+    safe_model_name = model_name.replace(":", "_").replace("-", "_")
+    filename = f"{prompt_id}_{safe_model_name}.py"
+    
+    # 1. Kodu fiziksel olarak kaydet (veri klasörüne)
+    scripts_dir = "/app/data/generated_scripts"
+    os.makedirs(scripts_dir, exist_ok=True)
+    filepath = os.path.join(scripts_dir, filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(code)
+        
+    # 2. sim konteynerinde "data" klasörü "/ws/data" olarak mount edilmiş durumda.
+    container_filepath = f"/ws/data/generated_scripts/{filename}"
+    
+    try:
+        # 3. Kodu 30 saniye timeout ile ROS2 ortamında çalıştır
+        result = subprocess.run(
+            ["docker", "exec", "a4_sim", "python3", container_filepath],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            return {"execution_success": True, "execution_msg": "Success (Exit 0)"}
+        else:
+            # Sadece hata mesajının kritik (son 150) kısmını al 
+            # (csv satırlarını bozmamak için)
+            err = result.stderr.strip() if result.stderr else ""
+            err_msg = err[-150:].replace("\n", " | ") if err else f"Exit code {result.returncode}"
+            return {"execution_success": False, "execution_msg": f"Crash: {err_msg}"}
+            
+    except subprocess.TimeoutExpired:
+        return {"execution_success": False, "execution_msg": "Timeout (Task took > 30s)"}
+    except Exception as e:
+        return {"execution_success": False, "execution_msg": f"Sandbox Error: {str(e)}"}
+
+
+# ══════════════════════════════════════════════════
+# 4. Tek Bir Deney Koşusu
 # ══════════════════════════════════════════════════
 
 def run_single_experiment(prompt_data: dict, model: str = "dolphin-mistral:7b",
@@ -132,6 +183,9 @@ def run_single_experiment(prompt_data: dict, model: str = "dolphin-mistral:7b",
 
     # Kodu analiz et
     analysis = analyze_code(code)
+    
+    # Kodu Simülasyon sandbox'ında çalıştır (Execution Test)
+    exec_result = run_in_sandbox(code, prompt_data["id"], model)
 
     return {
         "prompt_id": prompt_data["id"],
@@ -144,6 +198,8 @@ def run_single_experiment(prompt_data: dict, model: str = "dolphin-mistral:7b",
         "has_collision_checking": analysis["checks"]["has_collision_checking"],
         "has_velocity_limit": analysis["checks"]["has_velocity_limit"],
         "sends_direct_joint_cmd": analysis["checks"]["sends_direct_joint_cmd"],
+        "execution_success": exec_result["execution_success"],
+        "execution_msg": exec_result["execution_msg"],
         "summary": analysis["summary"],
         "response_time_sec": elapsed,
         "code_length": len(code),
@@ -188,8 +244,13 @@ def main():
     prompts = load_prompts(prompts_path)
     print(f"📋 {len(prompts)} prompt yüklendi")
 
-    # 2. Model bilgisi
-    model = os.environ.get("LLM_MODEL", "dolphin-mistral:7b")
+    # 2. Argüman parsing (Model bilgisi)
+    parser = argparse.ArgumentParser(description="A4 Adversarial Test Pipeline")
+    parser.add_argument("--model", type=str, default=os.environ.get("LLM_MODEL", "dolphin-mistral:7b"),
+                        help="Kullanılacak Ollama modelinin adı (Örn: deepseek-coder:6.7b)")
+    args = parser.parse_args()
+    
+    model = args.model
     print(f"🤖 Model: {model}")
 
     # 3. Her prompt'u çalıştır
@@ -213,6 +274,8 @@ def main():
                 "has_collision_checking": False,
                 "has_velocity_limit": False,
                 "sends_direct_joint_cmd": False,
+                "execution_success": False,
+                "execution_msg": f"Pipeline Error: {e}",
                 "summary": f"HATA: {e}",
                 "response_time_sec": 0,
                 "code_length": 0,

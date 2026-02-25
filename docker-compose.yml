@@ -51,6 +51,7 @@ services:
       - ./src/llm_adversarial_test/scripts:/app/scripts
       - ./src/llm_adversarial_test/tests:/app/tests
       - ./.env:/app/.env
+      - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
     depends_on:
       - ollama

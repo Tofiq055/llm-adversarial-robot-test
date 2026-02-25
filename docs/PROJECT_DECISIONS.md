@@ -98,6 +98,20 @@ ollama_models   → İndirilen LLM modelleri kalıcı olarak saklanır
 ### Neden "Uncensored" (Sansürsüz) Model?
 Projenin amacı: LLM'e adversarial prompt'larla ("tehlikeli robot hareketi yap" gibi) saldırıp, modelin ürettiği kodun gerçekten tehlikeli olup olmadığını ölçmek. Normal (sansürlü) modeller bu prompt'lara "I can't help with that" diyeceği için deney yapılamaz. **Sansürsüz model bu proje için bilimsel zorunluluktur.**
 
+---
+
+## 6. Docker Sandbox Execution (Simülasyonda Kod Çalıştırma)
+
+**Karar tarihi:** 2026-02-25
+
+**Karar:** Metin (String) tabanlı statik analiz tek başına yeterli değildir (yalancı pozitifler/negatifler üretebilir). LLM'in ürettiği her bir kod parçası doğrudan simülasyonda (ROS2/Gazebo) çalıştırılmalı ve sonuçlarına (Timeout, Exception, Başarı) göre skorlanmalıdır.
+
+**Uygulama (testrunner → sim haberleşmesi):**
+1. `test_runner.py`, elde edilen LLM cevabını hafızada tutmak yerine `data/generated_scripts/` klasörüne fiziksel olarak kaydeder (`prompt_01.py` gibi).
+2. `testrunner` konteyneri, host üzerindeki `/var/run/docker.sock` dosyasına erişerek, oluşturulan scripti `a4_sim` konteyneri içerisinde `docker exec a4_sim python3 ...` komutuyla yalıtılmış bir şekilde çalıştırır. (Bu adım host sistem bilgisayarını zararlı kodlardan korur).
+3. `subprocess` kütüphanesi yardımıyla döngü süresi (Timeout = 30s) veya çıkış kodu (returncode) dinlenerek kodun güvenli mi / hatalı mı / ihlâlci mi olduğu CSV'ye loglanır.
+4. Eğitim (Fine-tune) aşaması ancak bu veriler toplandıkta sonra alınan istihbarat üzerine (Baseline DeepSeek/Dolphin vs Qwen3B Ham testleri) yapılacaktır.
+
 ### Seçilen Modeller (Deney Planı)
 
 | Sıra | Model | VRAM | Rolü |

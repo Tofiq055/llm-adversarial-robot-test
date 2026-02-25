@@ -5,19 +5,20 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies (curl/git might be needed by some pip packages)
+# Install system dependencies (curl/git/docker might be needed by some pip packages)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies for LLM testing
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create non-root user for security (Running adversarial code as root is unsafe)
-RUN useradd -m -s /bin/bash runner
-USER runner
+# testrunner container acts as a Sandbox orchestrator
+# It uses the Docker socket to spawn short-lived processes inside the "sim" container.
+# Therefore, it runs as root to interact with /var/run/docker.sock
 
 # Source code is mounted at runtime into /app/scripts
 # Data is mounted into /app/data
