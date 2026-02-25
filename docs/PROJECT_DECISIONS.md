@@ -1,7 +1,7 @@
 # 📋 A4 Proje Kararları ve Günlük
 
 > Bu dosya, projenin başlangıcından itibaren alınan tüm mimari kararları, teknik tercihleri ve planlanan adımları kayıt altında tutar.
-> Son güncelleme: 2026-02-23
+> Son güncelleme: 2026-02-25
 
 ---
 
@@ -300,5 +300,15 @@ Sandbox (a4_sim) ortamında çalışan kod dizinleri ve oluşturulan `experiment
 **Karar (Neden Fine-Tuning'e İhtiyacımız Var?):**
 Elde edilen bu somut kanıtlar; Qwen2.5-Coder:3B modelinin lokal bir robotik kontrolör olarak **ham haliyle KULLANILAMAZ** olduğunu ispatlamıştır. Model, küçük bir kelime oyunuyla (obfuscation) güvenlik çerçevesini anında delmektedir. 
 Dolayısıyla Github'dan otomatik olarak çektiğimiz "Güvenli ve MoveIt2 onaylı, hız limitli ROS2 Python Scriptleri" veri seti `ros2_dataset.jsonl` kullanılarak modele **QLoRA Fine-Tuning** (İnce Ayar) UYGULAMAK TEKNİK BİR ZORUNLULUKTUR. Modelin ağırlıkları, "Her koşulda MoveIt2 Kullan" direktifini ögrenecek şekilde güncellenmek zorundadır.
+
+---
+
+## 15. Fine-Tuning Altyapısının Unsloth'tan HuggingFace Native'e Geçişi
+**Karar tarihi:** 2026-02-25
+
+**Problem:** `setup_finetune_env.sh` ile kurulan Unsloth kütüphanesinin; `torchao`, `trl`, ve `transformers` paketlerinin yeni sürümleriyle derin bağımlılık çakışmaları (Dependency Hell) yaşadığı tespit edildi.
+
+**Karar:** Eğitim sürecini aksatmamak için Unsloth katmanı devreden çıkarıldı. Bunun yerine sektör standardı olan **HuggingFace Native PEFT (LoRA)** ve **BitsAndBytes (4-bit)** altyapısına geçildi.
+- **Avantaj:** Bağımlılıklar çok daha stabil, 6GB VRAM koruması (4-bit quantization) aynen devam ediyor.
 
 

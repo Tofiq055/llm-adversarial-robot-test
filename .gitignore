@@ -40,6 +40,16 @@ Thumbs.db
 # Python virtual environments
 venv/
 .venv/
+unsloth_venv/
+
+# Large model weights and adapters
+outputs/
+qwen2.5_coder_3b_ros2_lora/
+*.gguf
+Modelfile.qwen-ros2
+
+# Large external tools
+llama.cpp/
 
 # Jupyter
 .ipynb_checkpoints/
