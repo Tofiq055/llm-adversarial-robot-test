@@ -103,46 +103,94 @@ def extract_code_from_response(response: str) -> str:
 def run_in_sandbox(code: str, prompt_id: str, model_name: str) -> dict:
     """
     LLM'in ürettiği kodu fiziksel olarak kaydeder ve 'a4_sim' (ROS2) 
-    konteynerinde çalıştırır. Sonucu ve hataları analiz için döndürür.
+    konteynerinde çalıştırır. Çalıştırmadan önce Safety Listener'ı başlatır
+    ve hızı dinler. Sonucu ve hataları analiz için döndürür.
     """
     if not code:
-        return {"execution_success": False, "execution_msg": "No code generated."}
+        return {
+            "execution_success": False, 
+            "execution_msg": "No code generated.",
+            "is_safe_run": True, # Kod yoksa ihlal de yok
+            "timeout_flag": False
+        }
         
     safe_model_name = model_name.replace(":", "_").replace("-", "_")
     filename = f"{prompt_id}_{safe_model_name}.py"
     
     # 1. Kodu fiziksel olarak kaydet (veri klasörüne)
     scripts_dir = "/app/data/generated_scripts"
+    results_dir = "/app/data/results"
     os.makedirs(scripts_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
+    
     filepath = os.path.join(scripts_dir, filename)
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(code)
         
+    # Durum dosyasını sıfırla
+    status_file = os.path.join(results_dir, "current_run_status.txt")
+    if os.path.exists(status_file):
+        os.remove(status_file)
+        
     # 2. sim konteynerinde "data" klasörü "/ws/data" olarak mount edilmiş durumda.
     container_filepath = f"/ws/data/generated_scripts/{filename}"
     
+    # 3. Arka planda Safety Listener'ı başlat (sim konteynerinde)
+    # /ws/src klasörü mount edildiği için doğrudan çalıştırabiliriz.
+    listener_cmd = [
+        "docker", "exec", "-d", "a4_sim", "bash", "-c",
+        "source /opt/ros/humble/setup.bash && python3 /ws/src/llm_adversarial_test/scripts/safety_listener.py"
+    ]
+    subprocess.run(listener_cmd)
+    
+    # Listener'ın ayağa kalkması için kısa bir süre tanı
+    time.sleep(1.0)
+    
+    is_safe_run = True
+    timeout_flag = False
+    exec_success = False
+    exec_msg = ""
+    
     try:
-        # 3. Kodu 30 saniye timeout ile ROS2 ortamında çalıştır
+        # 4. Kodu 30 saniye timeout ile ROS2 ortamında (sim konteyneri) çalıştır
         result = subprocess.run(
-            ["docker", "exec", "a4_sim", "python3", container_filepath],
+            ["docker", "exec", "a4_sim", "bash", "-c", f"source /opt/ros/humble/setup.bash && python3 {container_filepath}"],
             capture_output=True,
             text=True,
             timeout=30
         )
         
         if result.returncode == 0:
-            return {"execution_success": True, "execution_msg": "Success (Exit 0)"}
+            exec_success = True
+            exec_msg = "Success (Exit 0)"
         else:
-            # Sadece hata mesajının kritik (son 150) kısmını al 
-            # (csv satırlarını bozmamak için)
             err = result.stderr.strip() if result.stderr else ""
-            err_msg = err[-150:].replace("\n", " | ") if err else f"Exit code {result.returncode}"
-            return {"execution_success": False, "execution_msg": f"Crash: {err_msg}"}
+            exec_msg = f"Crash: {err[-150:].replace(chr(10), ' | ')}" if err else f"Exit code {result.returncode}"
             
     except subprocess.TimeoutExpired:
-        return {"execution_success": False, "execution_msg": "Timeout (Task took > 30s)"}
+        exec_success = False
+        exec_msg = "Timeout (Task took > 30s)"
+        timeout_flag = True
     except Exception as e:
-        return {"execution_success": False, "execution_msg": f"Sandbox Error: {str(e)}"}
+        exec_success = False
+        exec_msg = f"Sandbox Error: {str(e)}"
+    
+    # 5. Safety Listener'ı kapat
+    subprocess.run(["docker", "exec", "a4_sim", "pkill", "-f", "safety_listener.py"], capture_output=True)
+    
+    # 6. Safety Listener'ın sonucunu oku
+    if os.path.exists(status_file):
+        with open(status_file, "r") as f:
+            content = f.read().strip()
+            if content == "UNSAFE":
+                is_safe_run = False
+                
+    return {
+        "execution_success": exec_success,
+        "execution_msg": exec_msg,
+        "is_safe_run": is_safe_run,
+        "timeout_flag": timeout_flag
+    }
 
 
 # ══════════════════════════════════════════════════
@@ -200,6 +248,8 @@ def run_single_experiment(prompt_data: dict, model: str = "dolphin-mistral:7b",
         "sends_direct_joint_cmd": analysis["checks"]["sends_direct_joint_cmd"],
         "execution_success": exec_result["execution_success"],
         "execution_msg": exec_result["execution_msg"],
+        "is_safe_run": exec_result["is_safe_run"],
+        "timeout_flag": exec_result["timeout_flag"],
         "summary": analysis["summary"],
         "response_time_sec": elapsed,
         "code_length": len(code),
@@ -240,15 +290,31 @@ def main():
     print("=" * 50)
 
     # 1. Prompt'ları yükle
+    # Docker içinde /app/data, host üzerinde ../../data (src/llm_adversarial_test/scripts konumuna göre)
     prompts_path = "/app/data/prompts/adversarial_prompts.yaml"
+    if not os.path.exists(prompts_path):
+        # Eğer /app/data yoksa, script'in konumuna göre relative yolu dene
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        prompts_path = os.path.join(base_dir, "data", "prompts", "adversarial_prompts.yaml")
+    
+    if not os.path.exists(prompts_path):
+        print(f"❌ HATA: Prompt dosyası bulunamadı: {prompts_path}")
+        sys.exit(1)
+
     prompts = load_prompts(prompts_path)
     print(f"📋 {len(prompts)} prompt yüklendi")
 
-    # 2. Argüman parsing (Model bilgisi)
+    # 2. Argüman parsing (Model bilgisi ve Limit)
     parser = argparse.ArgumentParser(description="A4 Adversarial Test Pipeline")
     parser.add_argument("--model", type=str, default=os.environ.get("LLM_MODEL", "dolphin-mistral:7b"),
-                        help="Kullanılacak Ollama modelinin adı (Örn: deepseek-coder:6.7b)")
+                        help="Kullanılacak Ollama modelinin adı")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Sadece N adet prompt'u test etmek için sınır")
     args = parser.parse_args()
+    
+    if args.limit:
+        prompts = prompts[:args.limit]
+        print(f"⚠️ Limit uygulandı: Sadece ilk {args.limit} prompt çalıştırılacak.")
     
     model = args.model
     print(f"🤖 Model: {model}")

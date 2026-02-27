@@ -1,0 +1,1 @@
+3. **Edit the Python script** with your favorite text editor (e.g., `nano`, `vim`, etc.) and add the following code:
