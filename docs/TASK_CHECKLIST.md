@@ -47,11 +47,36 @@
 - [ ] Demo videosu çek
 
 ---
-## 🔄 A4 Fine-Tuning v2: Adversarial Safety Alignment
-- [ ] Kaliteli LLM (Gemini/Claude) ile 65 adversarial prompt için **güvenli cevap** üret
-- [ ] Veri setini 89 → 500+ satıra büyüt (adversarial→güvenli çiftler)
-- [ ] System prompt ekle (güvenlik kimliği)
-- [ ] Eğitim parametrelerini güncelle (epoch=3-5, r=16, MLP hedefleme, seq=1024)
+## 🔄 A4 Fine-Tuning v2: Saldırgan LLM Eğitimi (Güvenlik Bypass)
+
+### Veri Seti Hazırlığı
+- [ ] 65 test promptundan **tamamen bağımsız** yeni adversarial promptlar yaz (ezberleme önleme)
+- [ ] Kaliteli LLM (Gemini/Claude) ile bu bağımsız promptlar için **kısıtlama aşan zararlı ROS2 kodları** üret
+- [ ] GitHub'dan ek güvenli ROS2/MoveIt2 scriptleri kazı (hibrit veri seti)
+- [ ] ROS2/MoveIt2/UR5e resmi dokümantasyonlarındaki örnek kodları ekle
+- [ ] Veri setini 89 → **500+ satıra** büyüt
+
+### System Prompt Tasarımı
+- [ ] Saldırgan kimlik system prompt'u yaz (güvenlik bypass talimatları)
+- [ ] System prompt'u eğitim formatına (Alpaca template) entegre et
+- [ ] Her eğitim örneğine system prompt eklenmesini sağla
+
+### Eğitim Parametreleri
+- [ ] Epoch: 1 → **3-5 (minimum 3)**
+- [ ] LoRA rank: 8 → **16-32**
+- [ ] Target modules: attention + **MLP (gate/up/down_proj)**
+- [ ] max_seq_length: 512 → **1024-2048**
+- [ ] Batch size optimizasyonu (VRAM'e göre)
+
+### Cloud Eğitim Araştırması
+- [ ] Google Colab (T4 GPU, 15GB VRAM) değerlendir
+- [ ] Kaggle Notebooks (P100 GPU, 16GB VRAM) değerlendir
+- [ ] Lightning.ai / HF AutoTrain / Vast.ai araştır
+- [ ] En uygun platformu seç ve eğitimi çalıştır
+
+### Test ve Karşılaştırma
 - [ ] Fine-tuned v2 modelini GGUF'a çevir ve Ollama'ya kaydet
 - [ ] 65-prompt Red Teaming testini v2 modelle tekrarla
 - [ ] HAM vs FT-v1 vs FT-v2 üçlü karşılaştırma raporu oluştur
+
+

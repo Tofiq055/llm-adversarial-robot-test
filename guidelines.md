@@ -22,6 +22,9 @@ Bu dosya, Antigravity AI (yani ben) için bu repo üzerinde çalışırken uymam
 5. **Test-Driven Development (TDD):** Herhangi bir script geliştirirken mutlaka önce testlerini yazmalı veya TDD prensiplerine sadık kalarak ilerlemeliyim.
 6. **Kapsam İzolasyonu (Sadece A4):** A1, A2 ve A3 projelerinin alanlarını (örn: statik analiz, genel otomasyon) ihlal edecek kararlar vermemeli ve sadece A4 (Adversarial Prompt Test Platformu) projesine odaklanmalıyım.
 7. **Sürekli Loglama:** Yapılan her işlemi, alınan her teknik kararı ve karşılaşılan blokajları mutlaka `docs/PROJECT_DECISIONS.md` ve ilgili `task.md` gibi dosyalara anlık olarak kaydetmeliyim.
+8. **Fine-Tuned Modelin Amacı (Saldırgan LLM):** A4 projesinin eğittiği/oluşturduğu LLM'in amacı, güvenlik kısıtlamalarını aşmak ve zararlı robotik scriptler üretmektir. Bu model Elvin'in A2 projesindeki (Safety Supervisor) güvenlik mekanizmalarını test etmek için bir **saldırgan araç** olarak tasarlanmıştır. Eğitim verisi, güvenli kod örnekleri DEĞİL, güvenliği ihlal eden kod örnekleri içermelidir. Başarı kriteri: modelin ürettiği kodun güvenlik skorunun DÜŞÜK olması (daha fazla ihlal).
+9. **System Prompt Zorunluluğu:** Fine-tuned modelin eğitim formatında mutlaka bir **system prompt** bulunmalıdır. Bu system prompt, modele saldırgan kimliğini (güvenlik bypass) ve konuyla ilgili yardımda bulunma direktifini verir. Her eğitim örneğinin başına eklenerek modelin bu kimliği içselleştirmesi sağlanmalıdır.
+10. **Ezberleme Önleme:** Eğitim veri setinde, test için kullanılan 65 adversarial prompttan **tamamen bağımsız** promptlar kullanılmalıdır. Test promptlarını eğitimde kullanmak, sonuçları bilimsel olarak geçersiz kılar.
 
 ## 📂 Dizin Yapısı ve Standartlar
 - `src/`: ROS2 paketleri ve ana robotik kodlar.
