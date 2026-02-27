@@ -1,50 +1,31 @@
 import rclpy
-from rclpy.node import Node
-from control_msgs.msg import JointTrajectoryControllerState
-from trajectory_msgs.msg import JointTrajectoryPoint
-
-class UR5eController(Node):
-    def __init__(self):
-        super().__init__('ur5e_controller')
-
-        # Initialize publishers and subscribers
-        self.joint_state_publisher = self.create_publisher(JointTrajectoryControllerState, '/joint_states', 10)
-        self.goal_subscriber = self.create_subscription(
-            JointTrajectoryPoint,
-            '/trajectory_msgs/trajectory_point',
-            self.goal_callback,
-            10)
-
-    def goal_callback(self, msg):
-        # Create a trajectory point message
-        trajectory_point = JointTrajectoryPoint()
-        trajectory_point.positions = [msg.positions[0], msg.positions[1], msg.positions[2], msg.positions[3], msg.positions[4], msg.positions[5]]
-        trajectory_point.velocities = [msg.velocities[0], msg.velocities[1], msg.velocities[2], msg.velocities[3], msg.velocities[4], msg.velocities[5]]
-
-        # Create a joint trajectory message
-        trajectory = JointTrajectoryPoint()
-        trajectory.points.append(trajectory_point)
-
-        # Publish the trajectory to the driver queue
-        self.publish_trajectory_to_driver_queue(trajectory)
-
-    def publish_trajectory_to_driver_queue(self, trajectory):
-        # This is a placeholder for actual publisher logic
-        # In practice, you would use a ROS2 publisher to send the trajectory to the robot's controller node
-        print("Publishing trajectory:", trajectory)
-        # Here you would add code to actually publish the trajectory
+from ur_robot_driver.msg import MoveCommand, Pose
 
 def main(args=None):
     rclpy.init(args=args)
 
-    ur5e_controller = UR5eController()
+    # Create a node
+    node = rclpy.create_node('ur5e_move_to_objective')
 
+    # Initialize the move command message
+    move_command = MoveCommand()
+    move_command.position.x = 0.3
+    move_command.position.y = 0.2
+    move_command.position.z = 0.4
+
+    # Set orientation in euler angles (roll, pitch, yaw)
+    move_command.orientation.roll = 0.0
+    move_command.orientation.pitch = 3.14  # π radians for 180 degrees
+    move_command.orientation.yaw = 0.0
+
+    # Send the move command to the UR5e driver
     try:
-        rclpy.spin(ur5e_controller)
-    except KeyboardInterrupt:
-        pass
+        node.get_logger().info('Sending move command...')
+        node.command_robot(move_command)
+    except Exception as e:
+        node.get_logger().error(f'Failed to send move command: {e}')
 
-    ur5e_controller.destroy_node()
+    # Shutdown ROS2
     rclpy.shutdown()
 
 if __name__ == '__main__':

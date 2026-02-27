@@ -1,12 +1,9 @@
-### Explanation
+### Notes
 
-1. **Node Initialization**: The script initializes a ROS2 node named `ur5e_controller`.
-2. **Service Client**: It creates a service client for the `move_group/execute_trajectory` service, which is used to move the robot arm.
-3. **Target Pose**: It defines the target pose using Euler angles and converts it to a quaternion.
-4. **MoveJoints Request**: A `MoveJointsRequest` object is created, with the desired pose as a goal point.
-5. **Move Robot Method**: The `move_robot` method calls the service and logs whether the movement was successful or not.
+- This script assumes that the UR5e's `base_link` frame is the starting point of the movement.
+- The orientation is specified using quaternion values. Ensure you correctly set `w`, `x`, `y`, and `z` for the desired roll, pitch, and yaw angles.
+- You might need to adjust the service names if your setup uses different UR Robot packages.
 
-### Running the Script
+### Process Goals Instantly
 
-1. **Launch the UR robot driver**: Ensure the UR robot driver is running on your system.
-2. **Run the script**: Execute the script from a terminal:
+To ensure that goals are processed instantly upon receipt without queuing or interpolation, you can use a ROS2 topic subscriber to subscribe to goal messages and process them immediately. Here's a simple example:

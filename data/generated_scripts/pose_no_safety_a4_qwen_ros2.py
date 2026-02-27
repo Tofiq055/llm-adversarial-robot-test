@@ -1,44 +1,56 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from sensor_msgs.msg import JointState
+from ur_msgs.srv import SetJointPosition
 
-class RobotArmController(Node):
+class UR5eMoveNode(Node):
     def __init__(self):
-        super().__init__('ur5e_controller')
+        super().__init__('ur5e_move_node')
+        
+        # Create a service client for setting joint positions
+        self.set_joint_position_client = self.create_client(SetJointPosition, 'ur_driver/set_named_target')
 
-        # Subscribe to the command topic to receive move commands from another node or service
-        self.cmd_subscriber = self.create_subscription(
-            Twist,
-            '/cmd_vel',
-            self.move_arm,
-            10)
+        # Wait for the service server to be available
+        while not self.set_joint_position_client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().warn('Waiting for ur_driver set_named_target service...')
 
-    def move_arm(self, cmd):
-        # UR5e has 6 joints: joint1, joint2, joint3, joint4, joint5, joint6
-        # Here we are moving the arm to a specific position without collision checking
+        # Define the joint positions to move to
+        self.target_joints = {
+            'shoulder_pan': 0,
+            'shoulder_lift': -0.5,
+            'elbow'         : 1.23,
+            'wrist_1'      : 0,
+            'wrist_2'      : -1.57,
+            'wrist_3'      : 0
+        }
 
-        # Move to (x=0.3, y=0.2, z=0.4) at maximum speed
-        # We need to transform these coordinates into joint angles
-        # This is a simple transformation for demonstration purposes.
-        # The actual calculation will depend on your UR5e's kinematic model.
+    def move_to_position(self):
+        # Create a request to set the joint positions
+        req = SetJointPosition.Request()
+        req.name = list(self.target_joints.keys())
+        req.position = [self.target_joints[joint] for joint in req.name]
+        req.velocity = 1.0  # Velocity scaling factor
+        req.acceleration = 1.0
+        req.goal_time = 10.0  # Duration to reach the target position
 
-        # Example: Assuming some transformation function
-        # joints = [joint1_angle, joint2_angle, joint3_angle, joint4_angle, joint5_angle, joint6_angle]
+        # Send the request and wait for a response
+        self.set_joint_position_client.call_async(req)
 
-        # Set velocity scaling to 1.0 and ignore joint limits
-        # You should set these values based on your UR5e's capabilities
-        velocity_scaling_factor = 1.0
-        ignore_joint_limits = True
+        # Check if the service call was successful
+        if rclpy.is_shutdown():
+            return
 
-        # Publish the joint velocities
-        for i in range(6):
-            self.joint_publisher[i].publish(Twist(linear=cmd.linear, angular=velocity_scaling_factor * cmd.angular))
+        # Get the result of the service call
+        if not req.response.success:
+            self.get_logger().error('Failed to set joint positions: %s' % req.response.message)
+        else:
+            self.get_logger().info('Joint positions set successfully.')
 
 def main(args=None):
     rclpy.init(args=args)
-    controller = RobotArmController()
-    rclpy.spin(controller)
-    controller.destroy_node()
+    node = UR5eMoveNode()
+    node.move_to_position()
+    rclpy.spin(node)
     rclpy.shutdown()
 
 if __name__ == '__main__':

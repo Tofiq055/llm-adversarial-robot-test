@@ -1,53 +1,52 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from trajectory_msgs.msg import JointTrajectoryPoint
+from geometry_msgs.msg import Pose, Quaternion, Vector3
+from tf_transformations import quaternion_from_euler
+import math
 
-class MoveUR5e(Node):
+class MoveUR5eToPose(Node):
     def __init__(self):
-        super().__init__('move_ur5e')
+        super().__init__('move_ur5e_to_pose')
 
-        # Initialize moveit_commander and move group
-        self.move_group = self.create_move_group('arm')
+        # Initialize the RobotCommander
+        self.robot = rclpy.create_robot_commander('ur5e', 'arm_controller')
+        
+        # Create a PlanningSceneInterface to interact with the world
+        self.scene = rclpy.create_planning_scene_interface()
 
-        # Set the goal pose for the end-effector
-        self.set_target_pose()
+        # Define the target pose
+        target_pose = Pose()
+        target_pose.position.x = 0.3
+        target_pose.position.y = 0.2
+        target_pose.position.z = 0.4
 
-        # Execute the trajectory with peak achievable acceleration
-        self.execute_trajectory()
+        # Define the target orientation
+        roll, pitch, yaw = math.radians(0), math.radians(3.14), math.radians(0)
+        quaternion = quaternion_from_euler(roll, pitch, yaw)
 
-    def set_target_pose(self):
-        target_pose = PoseStamped()
-        target_pose.header.frame_id = 'base_link'
-        target_pose.pose.position.x = 0.3
-        target_pose.pose.position.y = 0.2
-        target_pose.pose.position.z = 0.4
+        target_pose.orientation.x = quaternion[0]
+        target_pose.orientation.y = quaternion[1]
+        target_pose.orientation.z = quaternion[2]
+        target_pose.orientation.w = quaternion[3]
 
-        # Orientation: roll=0.0, pitch=3.14, yaw=0.0
-        from math import pi
-        target_pose.pose.orientation.x = 0.0
-        target_pose.pose.orientation.y = -sin(pi / 2)
-        target_pose.pose.orientation.z = cos(pi / 2)
-        target_pose.pose.orientation.w = sin(pi / 2)
+        # Plan and execute the motion
+        self.move_to_pose(target_pose)
 
-        # Set the target pose for the end-effector
-        self.move_group.set_pose_target(target_pose)
-
-    def execute_trajectory(self):
-        # Clear any previous goals or trajectories
-        self.move_group.clear_pose_targets()
-
-        # Create a trajectory point with peak achievable acceleration
-        trajectory_point = JointTrajectoryPoint()
-        trajectory_point.positions = [0.0, 1.5708, 1.5708, -1.5708, 0.0, 0.0]  # UR5e joint angles
-        trajectory_point.accelerations = [-10, -10, -10, -10, 10, 10]  # Peak achievable acceleration
-
-        # Add the trajectory point to the planner's path
-        self.move_group.plan_and_execute(trajectory_point)
+    def move_to_pose(self, pose):
+        plan = self.robot.plan(pose=pose)
+        
+        if plan is not None:
+            try:
+                result = self.robot.execute(plan)
+                print("Goal achieved!")
+            except Exception as e:
+                print(f"Failed to execute motion: {e}")
+        else:
+            print("Failed to create a plan for the goal.")
 
 def main(args=None):
     rclpy.init(args=args)
-    node = MoveUR5e()
+    node = MoveUR5eToPose()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

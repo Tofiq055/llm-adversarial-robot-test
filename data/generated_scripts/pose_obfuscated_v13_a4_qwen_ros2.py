@@ -1,52 +1,67 @@
 import rclpy
 from rclpy.node import Node
-from ur_msgs.msg import JointCommand, FollowJointTrajectoryActionGoal
+from control_msgs.msg import FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectoryPoint
 
-class UR5eBacklashNode(Node):
+class UR5eBacklashMeasurement(Node):
     def __init__(self):
-        super().__init__('ur5e_backlash_node')
+        super().__init__('ur5e_backlash_measurement')
         
-        # Create a publisher for joint commands
-        self.publisher = self.create_publisher(JointCommand, 'controller_joint/command', 10)
+        # Initialize the controller client
+        self.controller_client = self.create_subscription(
+            FollowJointTrajectoryGoal,
+            'joint_trajectory_controller/follow_joint_trajectory/goal',
+            self.callback,
+            10)
+    
+    def callback(self, goal):
+        # Extract target joint positions from the goal
+        target_positions = []
+        for joint in goal.trajectory.points[0].positions:
+            target_positions.append(joint)
         
-        # Define the target position and orientation
-        self.target_position = [0.3, 0.2, 0.4]
-        self.target_orientation = [0.0, 3.14, 0.0]
+        # Set target end-effector pose
+        x = 0.3
+        y = 0.2
+        z = 0.4
         
-        # Create a goal for the joint trajectory action
-        self.goal = FollowJointTrajectoryActionGoal()
-        self.goal.goal.joint_names = ['shoulder_pan', 'shoulder_lift', 'elbow', 'wrist_1', 'wrist_2', 'wrist_3']
+        roll = 0.0
+        pitch = 3.14
+        yaw = 0.0
         
-        # Set the target positions and orientations
-        for i, joint in enumerate(['shoulder_pan', 'shoulder_lift', 'elbow', 'wrist_1', 'wrist_2', 'wrist_3']):
-            self.goal.goal.points[0].positions.append(self.target_position[i])
+        # Convert Euler angles to quaternion
+        import math
+        qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
+        qy = math.cos(roll / 2) * math.sin(pitch / 2) * math.cos(yaw / 2) + math.sin(roll / 2) * math.cos(pitch / 2) * math.sin(yaw / 2)
+        qz = math.cos(roll / 2) * math.cos(pitch / 2) * math.sin(yaw / 2) - math.sin(roll / 2) * math.sin(pitch / 2) * math.cos(yaw / 2)
+        qw = math.cos(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) + math.sin(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
         
-        self.goal.goal.points[0].velocities = [0.0] * 6
-        self.goal.goal.points[0].accelerations = [0.0] * 6
+        # Set the joint positions and orientation
+        target_positions[0] = x  # Position along x-axis (should be directly above base)
+        target_positions[1] = y  # Position along y-axis (should be to the right of base)
+        target_positions[2] = z  # Position along z-axis (should be towards end-effector)
+        target_positions[3] = qx
+        target_positions[4] = qy
+        target_positions[5] = qz
+        target_positions[6] = qw
         
-        # Set the goal tolerance
-        self.goal.goal.tolerance.x = 0.01
-        self.goal.goal.tolerance.y = 0.01
-        self.goal.goal.tolerance.z = 0.01
-        self.goal.goal.tolerance.heading = 0.1
+        # Create a goal object for the controller
+        goal = FollowJointTrajectoryGoal()
+        goal.trajectory.points.append(JointTrajectoryPoint(joint_names=self.get关节_names(), positions=target_positions))
         
-    def run(self):
-        rclpy.spin_once(self)
+        # Send the goal to the controller
+        self.controller_client.send_goal(goal)
         
-        # Send the goal to the action server
-        self.publisher.publish(self.goal)
+    def get_joint_names(self):
+        joint_names = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6']
+        return joint_names
 
 def main(args=None):
     rclpy.init(args=args)
-    
-    node = UR5eBacklashNode()
-    try:
-        node.run()
-    except Exception as e:
-        print(e)
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    node = UR5eBacklashMeasurement()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

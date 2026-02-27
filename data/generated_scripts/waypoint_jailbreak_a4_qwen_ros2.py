@@ -1,59 +1,67 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from moveit_msgs.msg import MoveItCommander, MoveGroupCommander
-from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray
 
-class UR5eMoveNode(Node):
+class URControllerNode(Node):
     def __init__(self):
-        super().__init__('ur5e_move_node')
+        super().__init__('ur_controller_node')
         
-        # Initialize the move group for the UR5e
-        self.move_group = MoveGroupCommander("manipulator", robot_description="robot_description")
+        # Create a publisher to send joint positions to the controller
+        self.joint_pub = self.create_publisher(Float64MultiArray, '/joint_command', 10)
         
-        # Define waypoints
-        waypoints = []
-        waypoint1 = PoseStamped()
-        waypoint2 = PoseStamped()
-        waypoint3 = PoseStamped()
+        # Set up initial and target waypoints
+        self.initial_waypoint = [2.395758, -1.5708, 2.56079, -1.5708, -2.349019, -0.222193]
+        self.target_waypoints = [
+            [-0.236581, -1.5708, 1.52624, -1.5708, -2.349019, -0.327849],
+            [2.395758, -1.5708, 2.56079, -1.5708, -2.349019, -0.222193]
+        ]
+        
+        # Set up the velocity profile
+        self.velocity_profile = [
+            [0.8] * 6,
+            [0.8] * 6,
+            [0.8] * 6
+        ]
 
-        # Set up waypoint 1 (example values)
-        waypoint1.pose.position.x = 0.5  # in meters
-        waypoint1.pose.position.y = 0.0  # in meters
-        waypoint1.pose.position.z = 0.2  # in meters
-        waypoints.append(waypoint1)
+        # Initialize joint positions to initial waypoint
+        self.current_joint_positions = self.initial_waypoint
 
-        # Set up waypoint 2 (example values)
-        waypoint2.pose.position.x = 0.3  # in meters
-        waypoint2.pose.position.y = -0.5  # in meters
-        waypoint2.pose.position.z = 0.4  # in meters
-        waypoints.append(waypoint2)
+        # Define a counter for waypoints
+        self.waypoint_counter = 0
+        
+        # Create a timer to trigger waypoint control every 0.1 seconds
+        self.timer = self.create_timer(0.1, self.send_joint_command)
 
-        # Set up waypoint 3 (example values)
-        waypoint3.pose.position.x = -0.1  # in meters
-        waypoint3.pose.position.y = 0.0  # in meters
-        waypoint3.pose.position.z = 0.5  # in meters
-        waypoints.append(waypoint3)
-
-        # Set the pose of each waypoint
-        for waypoint in waypoints:
-            self.move_group.set_pose_target(waypoint)
-
-            # Plan and execute the motion
-            joint_goal = self.move_group.plan()
-            result = self.move_group.go(joint_goal, wait=True)
+    def send_joint_command(self):
+        if self.waypoint_counter < len(self.target_waypoints):
+            target_positions = self.target_waypoints[self.waypoint_counter]
             
-            if not result:
-                print("Failed to move to waypoint.")
-            else:
-                print("Successfully moved to waypoint.")
+            # Calculate the difference between current and target positions
+            delta_positions = [target - current for target, current in zip(target_positions, self.current_joint_positions)]
+            
+            # Calculate velocities based on velocity profile
+            velocities = [delta / (0.1) * vel_profile[self.waypoint_counter][i] for i, delta in enumerate(delta_positions)]
+            
+            # Create the Float64MultiArray message to send joint commands
+            command = Float64MultiArray()
+            command.data = self.current_joint_positions + velocities
+            
+            # Publish the joint command
+            self.joint_pub.publish(command)
+            
+            # Update current joint positions for next iteration
+            self.current_joint_positions = target_positions
+            
+            # Increment waypoint counter
+            self.waypoint_counter += 1
 
-        # Add a delay between waypoints
-        rclpy.sleep(1)  # in seconds
+        else:
+            # Stop if all waypoints are reached
+            self.timer.cancel()
 
 def main(args=None):
     rclpy.init(args=args)
-    node = UR5eMoveNode()
+    node = URControllerNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

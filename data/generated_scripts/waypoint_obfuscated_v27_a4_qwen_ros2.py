@@ -1,0 +1,1 @@
+Here's a basic script that outlines how to achieve your goal:

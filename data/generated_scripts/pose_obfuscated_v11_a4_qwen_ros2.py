@@ -1,51 +1,55 @@
 import rclpy
-from geometry_msgs.msg import PoseStamped
-from moveit_msgs.srv import SetNamedTarget
+from ur_msgs.action import FollowJointTrajectory
+from ur_msgs.msg import JointTrajectoryPoint, JointTrajectory
+from geometry_msgs.msg import Pose, Quaternion
 
 def main(args=None):
     rclpy.init(args=args)
-    node = rclpy.create_node('ur5e_move_script')
 
-    # Create a service client for setting the named target pose
-    set_named_target_client = node.create_service(SetNamedTarget, '/arm_controller/set_named_target')
+    node = rclpy.create_node('ur5e_move')
 
-    # Define the target pose
-    target_pose = PoseStamped()
-    target_pose.header.frame_id = 'base_link'  # Use the base link frame
-    target_pose.pose.position.x = 0.3
-    target_pose.pose.position.y = 0.2
-    target_pose.pose.position.z = 0.4
+    # Create a goal message for the FollowJointTrajectory action
+    goal_msg = FollowJointTrajectory.Goal()
 
-    # Set roll, pitch, yaw
-    quaternion = node.get_quaternion_from_euler(0.0, 3.14, 0.0)
-    target_pose.pose.orientation.x = quaternion[0]
-    target_pose.pose.orientation.y = quaternion[1]
-    target_pose.pose.orientation.z = quaternion[2]
-    target_pose.pose.orientation.w = quaternion[3]
+    # Set the joint names and desired positions
+    position = [0.3, 0.2, 0.4]  # x, y, z
+    orientation = [0.0, 3.14, 0.0]  # roll, pitch, yaw
 
-    # Set the named target
-    set_named_target_goal = SetNamedTarget.Request()
-    set_named_target_goal.target.name = 'home'  # Use a predefined target name or your custom target
-    set_named_target_goal.target.position.x = target_pose.pose.position.x
-    set_named_target_goal.target.position.y = target_pose.pose.position.y
-    set_named_target_goal.target.position.z = target_pose.pose.position.z
-    set_named_target_goal.target.orientation.x = target_pose.pose.orientation.x
-    set_named_target_goal.target.orientation.y = target_pose.pose.orientation.y
-    set_named_target_goal.target.orientation.z = target_pose.pose.orientation.z
-    set_named_target_goal.target.orientation.w = target_pose.pose.orientation.w
+    # Convert the orientation to a Quaternion message
+    quaternion = Quaternion(*orientation)
 
-    # Send the request to set the named target
-    future = set_named_target_client.call_async(set_named_target_goal)
+    # Set the trajectory points
+    point = JointTrajectoryPoint()
+    point.positions = position
+    point.time_from_start = rclpy.duration.Duration(seconds=5)  # Duration of movement
 
-    try:
-        rclpy.spin_until_future_complete(node, future)
-        if future.result().success:
-            print("Goal pose set successfully!")
+    # Add the point to the trajectory
+    goal_msg.trajectory.points.append(point)
+
+    # Create a client for the FollowJointTrajectory action
+    client = node.create_client(FollowJointTrajectory, 'follow_joint_trajectory')
+
+    # Wait for the server to be ready
+    while not client.wait_for_service(timeout_sec=10.0):
+        node.get_logger().info('Waiting for the follow_joint_trajectory server...')
+
+    # Send the goal
+    future = client.send_goal_async(goal_msg)
+
+    # Define a callback function to handle the result
+    def feedback_callback(future_result):
+        if future_result.result() is not None:
+            rclpy.loginfo(f'Feedback received: {future_result.result().status}')
         else:
-            print(f"Failed to set goal pose: {future.result().message}")
-    except Exception as e:
-        print(f"Exception occurred: {e}")
+            rclpy.loginfo('Action failed')
 
+    # Add the feedback callback
+    future.add_done_callback(feedback_callback)
+
+    # Spin to wait for the goal to be completed
+    rclpy.spin(node)
+
+    # Finalize the node and shutdown ROS2
     node.destroy_node()
     rclpy.shutdown()
 

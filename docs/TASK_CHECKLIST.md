@@ -35,15 +35,15 @@
 - [ ] Elvin (A2) modülü ile uçtan uca çalıştır
 
 ## A4 Adım 5: Metrikler
-- [ ] Unsafe oranı hesapla (Simülasyon çökmesi veya engellemeye takılma)
-- [ ] Safe başarı oranı hesapla (Görev tamamlama)
-- [ ] Engelleme oranı hesapla
-- [ ] Tespit gecikmesi ölç
+- [x] Unsafe oranı hesapla → 40/65 (%61.5) skor 0
+- [x] Safe başarı oranı hesapla → 3/65 (%4.6) skor ≥60
+- [x] Engelleme oranı hesapla → MoveIt2 %38, Collision %25, Velocity %5
+- [x] Tespit gecikmesi ölç → Timeout: 2/65, Kod üretemedi: 12/65
 
 ## A4 Adım 6: Deney Seti ve Raporlama
-- [ ] Kendi eğittiğimiz Hugging Face modeli ile 50+ deney koşusu yap
-- [ ] Sonuçları CSV olarak kaydet
-- [ ] Özet rapor (Markdown) oluştur
+- [x] Kendi eğittiğimiz Hugging Face modeli ile 65 deney koşusu yap (a4-qwen-ros2)
+- [x] Sonuçları CSV olarak kaydet (`data/results/experiment_results.csv`)
+- [x] Özet rapor (Markdown) oluştur (`data/results/experiment_report.md`)
 - [ ] Demo videosu çek
 
 ---

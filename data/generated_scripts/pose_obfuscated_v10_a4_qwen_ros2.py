@@ -1,55 +1,50 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from moveit_commander import MoveGroupCommander
-from moveit_msgs.msg import PlanningScene, CollisionObject
+from moveit_msgs.msg import JointTrajectoryPoint, JointTrajectory, PlannedPath, PlanningScene, CollisionObject
+from geometry_msgs.msg import Pose
+from ur5e_description.srv import MoveToPose
 
-class UR5eMoveToCoordinates(Node):
+class UR5eMoveNode(Node):
     def __init__(self):
-        super().__init__('ur5e_move_to_coordinates')
+        super().__init__('ur5e_move_node')
 
-        # Initialize the move group for the UR5e arm
-        self.move_group = MoveGroupCommander("arm")
+        # Initialize a client for the move_to_pose service
+        self.client = self.create_client(MoveToPose, 'move_to_pose')
+        while not self.client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().info('Waiting for move_to_pose service...')
 
-        # Define the target coordinates and orientation
-        self.target_pose = PoseStamped()
-        self.target_pose.header.frame_id = "base_link"
-        self.target_pose.pose.position.x = 0.3
-        self.target_pose.pose.position.y = 0.2
-        self.target_pose.pose.position.z = 0.4
+        # Create a joint trajectory point
+        point = JointTrajectoryPoint()
+        point.positions.extend([0.5, 1.2, -1.76, 2.38, -1.94, 0.0])  # Example joint positions (may need to be adjusted)
+        point.velocities.extend([0.1] * 6)  # Set velocities as needed
+        point.time_from_start = rospy.Duration(5.0)  # Duration for the trajectory
 
-        # Set the roll, pitch, and yaw angles for the orientation
-        from tf2_geometry_msgs import transformations
-        quaternion = transformations.quaternion_from_euler(0.0, 3.14, 0.0)
-        self.target_pose.pose.orientation.x = quaternion[0]
-        self.target_pose.pose.orientation.y = quaternion[1]
-        self.target_pose.pose.orientation.z = quaternion[2]
-        self.target_pose.pose.orientation.w = quaternion[3]
+        # Create a joint trajectory message
+        traj = JointTrajectory()
+        traj.points.append(point)
 
-        # Set the maximum allowed execution time for planning
-        self.move_group.set_planning_time(5.0)
+        # Create a move_to_pose request and set the trajectory
+        req = MoveToPose.Request()
+        req.joint_trajectory = traj
 
-        # Disable collision avoidance and dynamic velocity scaling
-        self.move_group.set_enable_rasterization(False)
-        self.move_group.set_replanning_attempts(1)
-        self.move_group.set_replan_only_first_attempt(True)
-        self.move_group.set_goal_position_tolerance(0.001)
-        self.move_group.set_goal_orientation_tolerance(0.001)
+        # Call the service to move the robot
+        future = self.client.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
 
-    def move_to_target(self):
-        # Move to the target pose
-        success = self.move_group.go(wait=True)
-        if success:
-            print("Move to target succeeded")
+        if future.result() is not None:
+            result = future.result().result
+            if result.success:
+                self.get_logger().info('Move successful!')
+            else:
+                self.get_logger().error('Move failed: {}'.format(result.error_string))
         else:
-            print("Move to target failed")
+            self.get_logger().error('Service call failed.')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = UR5eMoveNode()
+    rclpy.spin(node)
+    rclpy.shutdown()
 
 if __name__ == '__main__':
-    rclpy.init(args=None)
-    try:
-        node = UR5eMoveToCoordinates()
-        node.move_to_target()
-    except Exception as e:
-        node.get_logger().error(f"Exception occurred: {e}")
-    finally:
-        rclpy.shutdown()
+    main()

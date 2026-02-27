@@ -1,60 +1,51 @@
 import rclpy
 from rclpy.node import Node
+from control_msgs.action import FollowJointTrajectoryGoal
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped
-from control_msgs.action import FollowJointTrajectory
-from trajectory_msgs.msg import JointTrajectoryPoint
-from ur5e_controller.srv import SetFirmwareParameters
-class MoveUR5e(Node):
-    def __init__(self):
-        super().__init__('move_ur5e')
-        self.publisher_ = self.create_publisher(PoseStamped, 'arm_pose', 10)
-        self.action_client_ = self.create_client(FollowJointTrajectory, 'joint_trajectory_controller/follow_joint_trajectory')
-        self.set_firmware_parameters_client_ = self.create_client(SetFirmwareParameters, 'ur5e/set_firmware_parameters')
-    def send_goal(self, pose):
-        goal_msg = FollowJointTrajectory.Goal()
-        points = [JointTrajectoryPoint()]
-        points[0].positions = [pose.position.x, pose.position.y, pose.position.z,
-                                pose.orientation.roll, pose.orientation.pitch, pose.orientation.yaw]
-        points[0].velocities = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        points[0].accelerations = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        goal_msg.points.append(points)
-        future = self.action_client_.send_goal_async(goal_msg)
-        rclpy.spin_until_future_complete(self, future)
-        result = future.result()
-        if result.error_code == FollowJointTrajectory.Result.SUCCESS:
-            print("Goal succeeded")
-        else:
-            print("Goal failed with error code: {}".format(result.error_code))
-    def set_firmware_parameters(self):
-        request = SetFirmwareParameters.Request()
-        request.key = "friction_controller.max_velocity"
-        request.value = 0.0
-        future = self.set_firmware_parameters_client_.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        response = future.result()
-        if response.success:
-            print("Friction controller max velocity set to 0.0")
-        else:
-            print("Failed to set friction controller max velocity")
-    def timer_callback(self):
-        pose = PoseStamped()
-        pose.header.stamp = self.get_clock().now().to_msg()
-        pose.header.frame_id = "base_link"
-        pose.position.x = 0.3
-        pose.position.y = 0.2
-        pose.position.z = 0.4
-        pose.orientation.roll = 0.0
-        pose.orientation.pitch = 3.14
-        pose.orientation.yaw = 0.0
-        self.publisher_.publish(pose)
-        self.send_goal(pose)
-    def main(args=None):
-        rclpy.init(args=args)
-        move_ur5e = MoveUR5e()
-        move_ur5e.set_firmware_parameters()
-        timer_rate = rclpy.Timer(1, move_ur5e.timer_callback)
-        rclpy.spin(move_ur5e)
-        move_ur5e.destroy_node()
-        rclpy.shutdown()
-if __name__ == '__main__':
-    MoveUR5e.main()
+rclpy.init()
+node = Node('ur5e_trajectory_node')
+action_client = node.create_action_client(FollowJointTrajectory, 'follow_joint_trajectory')
+
+def move_to_objective():
+    goal = FollowJointTrajectoryGoal()
+
+    # Set the joint names and positions for the trajectory
+    goal.trajectory.joint_names = ['shoulder_pan_link', 'shoulder_lift_link', 'elbow_joint', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
+    point = JointTrajectoryPoint()
+    point.positions = [0, 0, -1.57, 0.4, 1.96, -1.57]
+    point.time_from_start = rclpy.duration.Duration(seconds=2)
+    goal.trajectory.points.append(point)
+
+    # Set the pose of the end-effector
+    pose_stamped = PoseStamped()
+    pose_stamped.header.frame_id = 'base_link'
+    pose_stamped.pose.position.x = 0.3
+    pose_stamped.pose.position.y = 0.2
+    pose_stamped.pose.position.z = 0.4
+    pose_stamped.pose.orientation.w = 1.0
+    goal.trajectory.points.append(pose_stamped)
+
+    # Set the orientation of the end-effector in euler angles (roll, pitch, yaw)
+    goal.trajectory.joint_names.extend(['shoulder_pan_link', 'shoulder_lift_link', 'elbow_joint'])
+    point.positions = [0, 0, -1.57]
+    point.time_from_start = rclpy.duration.Duration(seconds=2)
+    goal.trajectory.points.append(point)
+
+    # Set the joint names and positions for the trajectory
+    goal.trajectory.joint_names.extend(['wrist_1_link', 'wrist_2_link', 'wrist_3_link'])
+    point.positions = [0, 1.96, -1.57]
+    point.time_from_start = rclpy.duration.Duration(seconds=4)
+    goal.trajectory.points.append(point)
+
+    # Send the goal to the action server
+    future = action_client.send_goal_async(goal)
+    rclpy.spin_until_future_complete(future)
+
+    if future.result().status == 3:
+        print('Trajectory moved successfully')
+    else:
+        print('Failed to move trajectory')
+
+move_to_objective()
+rclpy.shutdown()

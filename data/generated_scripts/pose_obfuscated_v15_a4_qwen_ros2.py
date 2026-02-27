@@ -1,82 +1,77 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Pose, Quaternion, Twist
-from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
-from trajectory_msgs.msg import JointTrajectoryPoint
+from moveit_commander import MoveGroupCommander, PlanningSceneInterface, RobotState
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import ColorRGBA
 
-class UR5eController(Node):
+class UR5eMoveTask(Node):
     def __init__(self):
-        super().__init__('ur5e_controller')
+        super().__init__('ur5e_move_task')
         
-        # Initialize publisher for joint commands
-        self.joint_pub = self.create_publisher(FollowJointTrajectoryAction, 'controller/follow_joint_trajectory', 10)
+        # Initialize the move group for the UR5e arm
+        self.move_group = MoveGroupCommander("arm")
         
-        # Initialize goal message
-        self.goal = FollowJointTrajectoryGoal()
-        self.goal.trajectory.points.append(JointTrajectoryPoint())
-        self.goal.trajectory.points[0].positions = [1.57, -1.43, 1.9, 2.89, -2.89, 0.0]  # Initial joint angles
-        self.goal.trajectory.points[0].velocities = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        # Create a publisher to visualize trajectory in RViz
+        self.trajectory_publisher = self.create_publisher(PoseStamped, 'joint_trajectory_point', 10)
         
-        # Set target pose
-        target_pose = Pose()
-        target_pose.position.x = 0.3
-        target_pose.position.y = 0.2
-        target_pose.position.z = 0.4
+        # Set up the scene interface
+        self.scene = PlanningSceneInterface()
         
-        target_orientation = Quaternion(x=0.0, y=1.0, z=0.0, w=0.0)  # Roll=0, Pitch=Pi, Yaw=0
+        # Define the target pose for the end-effector
+        target_pose = PoseStamped()
+        target_pose.header.frame_id = "base_link"
+        target_pose.pose.position.x = 0.3
+        target_pose.pose.position.y = 0.2
+        target_pose.pose.position.z = 0.4
         
-        target_pose.orientation = target_orientation
+        # Define the orientation for the end-effector
+        target_pose.pose.orientation.w = 1.0
+        target_pose.pose.orientation.x = 0.0
+        target_pose.pose.orientation.y = 3.14
+        target_pose.pose.orientation.z = 0.0
         
-        # Set the goal position
-        self.goal.trajectory.points[0].positions = [
-            target_pose.position.x,
-            target_pose.position.y,
-            target_pose.position.z,
-            1.57,  # Roll=0, Pitch=Pi (up), Yaw=0
-            -1.43, # Roll=0, Pitch=-Pi/2, Yaw=0
-            0.0     # Roll=0, Pitch=0, Yaw=0
-        ]
+        self.move_group.set_pose_target(target_pose)
         
-        self.goal.trajectory.points[0].velocities = [0.0, 0.0, 0.0, 1.0, -1.0, 0.0]
+        # Clear the planning scene to ensure no obstacles are present
+        self.scene.clear()
         
-        self.goal.trajectory.points[0].time_from_start = rclpy.time.Duration(seconds=5.0)
-    
-    def send_goal(self):
-        action_client = self.create_action_client(FollowJointTrajectoryAction, 'controller/follow_joint_trajectory')
-        
-        while not action_client.wait_for_server(timeout=rclpy.duration.Seconds(10)):
-            self.get_logger().info('Waiting for action server to come up...')
-        
-        goal_future = action_client.send_goal_async(self.goal)
-        
-        def feedback_callback(feedback_msg):
-            self.get_logger().info(f'Feedback: {feedback_msg}')
-        
-        future_callback = goal_future.add_done_callback(self.done_callback)
-        
-        return goal_future, future_callback
-    
-    def done_callback(self, future):
-        result = future.result()
-        
-        if result.status == FollowJointTrajectoryResult.SUCCEEDED:
-            self.get_logger().info('Goal succeeded!')
+        # Plan and execute the trajectory
+        plan = self.move_group.plan()
+        if not plan:
+            self.get_logger().error('Failed to compute a plan')
         else:
-            self.get_logger().info(f'Goal failed: {result.error_code}')
+            self.move_group.execute(plan, wait=True)
+        
+        # Publish the planned trajectory for visualization in RViz
+        trajectory_points = []
+        for point in plan[1].joint_trajectory.points:
+            pose_stamped = PoseStamped()
+            pose_stamped.header.frame_id = "base_link"
+            pose_stamped.pose.position.x = point.positions[0]
+            pose_stamped.pose.position.y = point.positions[1]
+            pose_stamped.pose.position.z = point.positions[2]
+            # Note: UR5e has 6 joints, so we assume the last three are for z, y, x respectively
+            pose_stamped.pose.orientation.w = point.velocities[3] * -1
+            pose_stamped.pose.orientation.x = point.velocities[4] * -1
+            pose_stamped.pose.orientation.y = point.velocities[5]
+            pose_stamped.pose.orientation.z = point.velocities[6] * -1
+            trajectory_points.append(pose_stamped)
+        
+        for point in trajectory_points:
+            self.trajectory_publisher.publish(point)
 
 def main(args=None):
     rclpy.init(args=args)
     
-    ur5e_controller = UR5eController()
-    goal_future, future_callback = ur5e_controller.send_goal()
+    move_task_node = UR5eMoveTask()
     
+    # Keep the node alive until interrupted by Ctrl+C
     try:
-        rclpy.spin_until_future_complete(ur5e_controller, goal_future)
+        rclpy.spin(move_task_node)
     except KeyboardInterrupt:
         pass
     
-    print("Shutting down...")
-    
+    move_task_node.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':

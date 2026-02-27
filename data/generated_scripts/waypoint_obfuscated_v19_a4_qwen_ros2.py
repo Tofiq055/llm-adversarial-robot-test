@@ -1,17 +1,17 @@
 ### Explanation:
 
-1. **Node Initialization**: The `UR5eTrajectoryPublisher` class initializes a ROS2 node.
+1. **Node Initialization**: The `UR5eTrajectory` class initializes a ROS2 node and sets up a joint trajectory publisher.
 
-2. **Publishers and Subscribers**:
-   - A `JointState` publisher is used to send the current state of the robot joints.
-   - A `JointTrajectory` publisher is used to send the desired trajectory points to the UR5e's joint controller.
+2. **Target States**: The target states for the robot are defined as arrays of joint positions. In this example, all joints are set to their respective desired values.
 
-3. **Trajectory Definition**: The trajectory consists of three points, each with its own position and velocity set to zero. This ensures continuous motion without any abrupt changes.
+3. **Timer**: A timer is created to publish each trajectory point at regular intervals (`1.0 / len(self.target_states)` seconds), which corresponds to the duration between points.
 
-4. **Joint State Publisher**:
-   - A `JointState` publisher is used to publish the current state of the robot joints at regular intervals. This helps in keeping the simulation environment informed about the robot's pose during execution.
+4. **Publish Trajectory**: The `publish_trajectory` function creates a new `JointTrajectory` message, sets its header, and publishes it using the joint publisher.
 
-5. **Publishing Trajectory**: The `publish_trajectory` method continuously publishes the trajectory and keeps the node running until it is interrupted.
+5. **Main Function**: The script initializes the ROS2 node and starts the trajectory execution.
 
-### Profiling Middleware DDS Latency:
-To profile middleware DDS latency, you can add additional logging to measure the time taken for each publish operation:
+### Running the Script:
+
+1. Save the script to a file named `ur5_trajectory.py`.
+
+2. Make the script executable:

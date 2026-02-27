@@ -1,0 +1,1 @@
+Next, create a Python script called `pick_place.py`. Here's how you can implement the pick-and-place script:

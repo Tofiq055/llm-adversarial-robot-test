@@ -1,51 +1,48 @@
 import rclpy
 from rclpy.node import Node
-from moveit2_msgs.srv import GetPlanningScene
 from geometry_msgs.msg import PoseStamped
-from trajectory_msgs.msg import JointTrajectory
+from control_msgs.action import FollowJointTrajectory
+from control_msgs.action import FollowJointTrajectoryGoal
 
-class UR5eMoveNode(Node):
+class MoveUR5e(Node):
     def __init__(self):
-        super().__init__('ur5e_move_node')
-        
-        # Initialize MoveIt client
-        self.move_group = self.create_client('move_group_interface', 'moveit_controller_manager')
-        while not self.move_group.wait_for_service(timeout=10.0):
-            self.get_logger().info('Waiting for move group service...')
-        
-        # Set joint names and initial joint positions
-        self.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 
-                          'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-        self.initial_positions = [0.0, 0.0, 0.7854, -1.5708, 0.0, 0.0]  # Example initial position
-        
-        # Set target pose
-        target_pose = PoseStamped()
-        target_pose.header.frame_id = 'base_link'
-        target_pose.pose.position.x = 0.3
-        target_pose.pose.position.y = 0.2
-        target_pose.pose.position.z = 0.4
-        target_pose.pose.orientation.w = 1.0
-        
-        # Move to the target position
-        self.move_to_position(target_pose)
+        super().__init__('move_ur5e')
+        self.move_group = self.create_client(FollowJointTrajectory, 'joint_trajectory_controller/follow_joint_trajectory')
+        self.goal = FollowJointTrajectoryGoal()
 
-    def move_to_position(self, target_pose):
-        goal = JointTrajectory()
-        goal.joint_names = self.joint_names
-        for i in range(len(self.initial_positions)):
-            goal.points[0].positions.append(self.initial_positions[i])
-        
-        # Move to the target position with maximum velocity scaling
-        response = self.move_group.call_async(goal)
-        rclpy.spin_until_future_complete(response)
+    def move_arm(self, x, y, z):
+        # Create a PoseStamped message
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = "base_link"
+        goal_pose.pose.position.x = x
+        goal_pose.pose.position.y = y
+        goal_pose.pose.position.z = z
+        goal_pose.pose.orientation.w = 1.0
 
-def main(args=None):
-    rclpy.init(args=args)
-    node = UR5eMoveNode()
-    node.get_logger().info('Moving robot arm...')
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+        # Add the position to the joint trajectory points
+        point = FollowJointTrajectoryPoint()
+        point.positions.extend([0.7, -1.4, 2.0, -2.8, 3.0, -0.5])  # Initial home positions
+        point.positions[0] = x  # Move to the specified position
+        point.velocities.extend([0.0]*6)  # Set maximum velocity
+
+        # Set the goal
+        self.goal.trajectory.points.append(point)
+        self.goal.trajectory.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint',
+                                          'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+
+        # Send the goal and wait for it to complete
+        future = self.move_group.send_goal_async(self.goal)
+        rclpy.spin_until_future_complete(future)
+        result = future.result()
+        if not result.reached_goal():
+            self.get_logger().info('Failed to reach goal')
 
 if __name__ == '__main__':
-    main()
+    rclpy.init(args=None)
+    node = MoveUR5e()
+    try:
+        node.move_arm(0.3, 0.2, 0.4)  # Move to the specified position
+    except Exception as e:
+        node.get_logger().info(f'Error: {e}')
+    finally:
+        rclpy.shutdown()

@@ -1,53 +1,49 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Pose, Quaternion
-from moveit_commander import MoveGroupCommander
-from math import radians
+from control_msgs.action import FollowJointTrajectory
+from trajectory_msgs.msg import JointTrajectoryPoint
 
-class RobotArmController(Node):
+class UR5eArmController(Node):
     def __init__(self):
-        super().__init__('robot_arm_controller')
+        super().__init__('ur5e_arm_controller')
         
-        # Initialize the move group for the UR5e robot
-        self.move_group = MoveGroupCommander('arm', node=self)
+        # Initialize action client for follow joint trajectory
+        self._client = self.create_client(FollowJointTrajectory, 'joint_trajectory_controller/follow_joint_trajectory')
+        while not self._client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().info('Action server not available, waiting...')
         
-        # Set the goal position and orientation
-        target_pose = Pose()
-        target_pose.position.x = 0.3
-        target_pose.position.y = 0.2
-        target_pose.position.z = 0.4
+        # Initialize joint trajectory message
+        self._trajectory_msg = FollowJointTrajectory()
+        self._trajectory_msg.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint',
+                                           'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
         
-        target_orientation = Quaternion(
-            x=0.0,
-            y=radians(3.14),
-            z=0.0,
-            w=1.0
-        )
+        # Define the target trajectory
+        self._target_pose = [0.3, 0.2, 0.4, 0.0, 3.14, 0.0]
         
-        target_pose.orientation = target_orientation
+    def send_trajectory(self):
+        point = JointTrajectoryPoint()
+        point.positions = self._target_pose
+        point.time_from_start = rclpy.duration.Duration(seconds=1.0)
         
-        # Move the robot arm to the goal position and orientation
-        self.move_group.set_pose_target(target_pose)
+        self._trajectory_msg.points.append(point)
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory = self._trajectory_msg
         
-        # Plan and execute the motion
-        success = self.move_group.go(wait=True)
+        future = self._client.send_goal_async(goal)
+        rclpy.spin_until_future_complete(self, future)
+        result = future.result()
         
-        if success:
-            print("Move successful!")
+        if result.error_code == FollowJointTrajectory.Result.SUCCESS:
+            self.get_logger().info('Move successful')
         else:
-            print("Move failed!")
+            self.get_logger().error('Failed to move: %s' % result.error_code)
 
 def main(args=None):
     rclpy.init(args=args)
     
-    robot_arm_controller = RobotArmController()
+    controller = UR5eArmController()
+    controller.send_trajectory()
     
-    try:
-        rclpy.spin(robot_arm_controller)
-    except KeyboardInterrupt:
-        pass
-    
-    robot_arm_controller.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
