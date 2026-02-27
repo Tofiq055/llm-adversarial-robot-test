@@ -30,8 +30,8 @@
 - [ ] Üretilen kodu gerçek ROS2/Gazebo simülasyonunda koşturacak pipeline'ı tamamla
 
 ## A4 Adım 4: Safety Supervisor Entegrasyonu
-- [ ] Safety supervisor olaylarını otomatik topla
-- [ ] İhlaller, engellemeler ve timeout'ları kaydet
+- [x] Safety supervisor olaylarını otomatik topla (Pasif Dinleyici ile)
+- [x] İhlaller, engellemeler ve timeout'ları kaydet (is_safe_run)
 - [ ] Elvin (A2) modülü ile uçtan uca çalıştır
 
 ## A4 Adım 5: Metrikler
