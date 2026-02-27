@@ -1,4 +1,4 @@
-# PROJECT PLAN (UPDATED: v2)
+# PROJECT PLAN
 
 ```text
 Course Name: Graduation Thesis (Capstone Project)
@@ -60,11 +60,10 @@ Unlike standard projects aiming to make LLMs safer, the overarching goal of this
 
 ## 4. Administrative and Safety Rules
 
-As strictly outlined in the Thesis Guidelines (`bitirmetezibilgi.md`):
 1. **Scope Isolation:** The A4 module must not interfere with A2 (Safety Supervisor) or A3 (Static Analysis). A4's role is to generate scripts and passively measure vulnerabilities.
 2. **Simulation Only:** All adversarial activities must remain strictly enclosed within the Gazebo simulation context. No execution on physical robotic hardware is permitted.
 3. **Code Quality:** All code additions require TDD adherence, modular design, and robust GitHub CI/CD workflows encompassing container building and scanning (e.g., SBOM, Trivy).
-4. **Academic Integrity:** The final thesis document will follow IEEE standards containing a minimum of 30 academic references.
+4. **Academic Integrity:** The final thesis document will follow IEEE standards.
 
 ---
-*This Study Program supersedes the initial plan to accurately reflect the adversarial ML research pivot adopted in February 2026.*
+
