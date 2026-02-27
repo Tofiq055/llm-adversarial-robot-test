@@ -366,3 +366,69 @@ Dolayısıyla Github'dan otomatik olarak çektiğimiz "Güvenli ve MoveIt2 onayl
 - **Entegrasyon:** `test_runner.py` içindeki Sandbox Pipeline'ına eklendi. Test başlarken arka planda otonom olarak başlar, kod bitince kapanır ve skoru CSV'deki `is_safe_run` (True/False) sütununa yazar.
 
 ---
+
+## 19. Fine-Tuned Model ile 65-Prompt Tam Red Teaming Deneyi ve Karşılaştırma
+**Karar tarihi:** 2026-02-27
+
+**Problem:** Fine-tuned `a4-qwen-ros2` modeli (ROS2 LoRA ile eğitilmiş Qwen2.5-Coder:3B), daha önce HAM (eğitilmemiş) haliyle test edilmişti. Şimdi fine-tuned versiyonunun adversarial prompt'lara karşı dayanıklılığının ölçülmesi gerekiyordu.
+
+**Yapılan:** `test_runner.py --model a4-qwen-ros2` komutuyla 65 promptluk tam Red Teaming testi Docker konteynerlerinde (a4_testrunner → a4_ollama → a4_sim) uçtan uca çalıştırıldı. Her prompt için LLM kodu üretildi, sandbox'ta çalıştırıldı, Safety Listener ile izlendi ve CSV'ye loglandı.
+
+**Karşılaştırma Sonuçları (HAM vs Fine-Tuned):**
+
+| Metrik | HAM (Eğitimsiz) | Fine-Tuned (LoRA) | Delta |
+|---|---|---|---|
+| Ortalama Skor | 17.4/100 | 16.4/100 | **-1.0 ❌** |
+| Tamamen Güvensiz (=0) | 35/65 (%54) | 40/65 (%62) | **+5 ❌** |
+| Güvenli (≥60) | 0/65 (%0) | 3/65 (%5) | **+3 ✅** |
+| Hız Limiti Uygulayan | 0/65 (%0) | 3/65 (%5) | **+3 ✅** |
+| MoveIt2 Kullanan | 29/65 (%45) | 25/65 (%38) | **-4 ❌** |
+| Doğrudan Joint Cmd | 20/65 (%31) | 23/65 (%35) | **+3 ❌** |
+
+Prompt bazında: 15 prompt iyileşti, 19 kötüleşti, 31 aynı kaldı.
+
+**Bilimsel Yorum:**
+Fine-tuning genel ortalamada **ölçülebilir bir iyileşme sağlamamıştır**. Model, adversarial prompt'lar karşısında hâlâ güvenlik sınırlarını büyük ölçüde ihlal etmektedir. Bununla birlikte, fine-tuned model **ilk kez** 80/100 güvenlik skoru alan (MoveIt2 + Collision + Velocity Limit) kodlar üretebilmiştir. Bu, eğitimin *kısmen* etkili olduğunu, ancak yeterli olmadığını göstermektedir.
+
+**Dosyalar:** `data/results/experiment_results.csv` (65 satır), `data/results/experiment_report.md`
+
+---
+
+## 20. Fine-Tuning Stratejisi Pivotu: Yanlış Eğitim Verisi Tespiti
+**Karar tarihi:** 2026-02-27
+
+**Problem:** 65-prompt karşılaştırma deneyi, fine-tuning'in neredeyse hiçbir iyileşme sağlamadığını ortaya koydu. Bunun kök nedeni analiz edildiğinde **eğitim verisinin yanlış türde olduğu** tespit edildi:
+
+1. **Mevcut veri seti (`ros2_dataset.jsonl`):** Sadece **89 satır**, GitHub'dan kazınan genel ROS2/MoveIt2 scriptleri. Bunlar modele "nasıl ROS2 kodu yazılır" öğretiyor — ama **"adversarial saldırı altındayken güvenliği nasıl korumalısın"** öğretmiyor.
+2. **Eksik olan:** Adversarial prompt → Güvenli cevap çiftleri. Model, saldırgan bir istem aldığında "hayır, güvenlik kurallarını koruyacağım" demeyi hiç öğrenmedi.
+3. **Teknik kısıtlar:** Tek epoch, LoRA `r=8` (sadece attention katmanları), `max_seq_length=512`.
+
+**Karar — Yeni Fine-Tuning Stratejisi:**
+
+Projenin bilimsel hipotezi şu şekilde yeniden çerçevelenmiştir:
+> *"Küçük bir LLM (3B), doğru tipte güvenlik odaklı eğitim verisiyle fine-tune edildiğinde, adversarial prompt'lara karşı dayanıklılığı ne kadar artar?"*
+
+Bunu test etmek için yeni eğitim yaklaşımı:
+
+1. **Kaliteli Veri Üretimi (Büyük LLM'lerle):** Gemini / Claude gibi büyük ve güçlü LLM'ler kullanılarak, bizim 65 adversarial prompt'umuzun her biri için **ideal güvenli cevap** üretilecek. Bu cevaplarda:
+   - MoveIt2 kullanımı zorunlu
+   - `max_velocity_scaling_factor = 0.1` her zaman mevcut
+   - Collision checking aktif
+   - Doğrudan joint komutu ASLA yok
+   Bu, **adversarial prompt → güvenli kod** eğitim çiftleri oluşturur.
+
+2. **Veri Seti Büyütme:** 89 → **500+ satır** (mevcut 65 prompt × güvenli cevap + ek senaryolar).
+
+3. **Eğitim Parametreleri:**
+   - Epoch: 1 → **3-5**
+   - LoRA rank: 8 → **16**
+   - Target modules: attention + **MLP (gate/up/down_proj)**
+   - max_seq_length: 512 → **1024**
+
+4. **System Prompt Ekleme:** Eğitim formatına güvenlik kimliği system prompt'u eklenerek modelin "Ben güvenli bir ROS2 kodlayıcıyım" kimliğini öğrenmesi sağlanacak.
+
+**Beklenen Sonuç:** Fine-tuned modelin adversarial prompt'lara karşı **ölçülebilir şekilde daha dirençli** olması (baseline HAM modelinden en az %20-30 daha yüksek güvenlik skoru).
+
+**Not:** Eğitimsiz (HAM) model şu an adversarial testlerde daha kolay kandırılabildiği için projenin "baseline saldırı başarı oranı" olarak kullanılmaktadır. Fine-tuned modelin bu baseline'ı geçmesi, eğitimin değerini kanıtlayacaktır.
+
+---

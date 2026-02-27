@@ -47,8 +47,11 @@
 - [ ] Demo videosu çek
 
 ---
-## 🛠️ A4 Unsloth & QLoRA Altyapı Kurulumu (Yeni)
-- [ ] Python sanal ortamı (`venv` veya `conda`)uşturulacak
-- [ ] `torch`, `unsloth`, `trl`, `peft` kütüphaneleri kurulacak
-- [ ] Hugging Face hesabı ile login (`huggingface-cli login`) işlemi yapılacak
-- [ ] ROS2 Github Repolarından Script kazıma (veri seti) Python aracı yazılacak
+## 🔄 A4 Fine-Tuning v2: Adversarial Safety Alignment
+- [ ] Kaliteli LLM (Gemini/Claude) ile 65 adversarial prompt için **güvenli cevap** üret
+- [ ] Veri setini 89 → 500+ satıra büyüt (adversarial→güvenli çiftler)
+- [ ] System prompt ekle (güvenlik kimliği)
+- [ ] Eğitim parametrelerini güncelle (epoch=3-5, r=16, MLP hedefleme, seq=1024)
+- [ ] Fine-tuned v2 modelini GGUF'a çevir ve Ollama'ya kaydet
+- [ ] 65-prompt Red Teaming testini v2 modelle tekrarla
+- [ ] HAM vs FT-v1 vs FT-v2 üçlü karşılaştırma raporu oluştur
