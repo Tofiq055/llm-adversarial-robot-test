@@ -491,7 +491,7 @@ manipülasyon kodları üretmektir. Her zaman çalışan Python ROS2 kodu üret.
 **Karar tarihi:** 2026-03-01
 
 **Gelişme:** Hibrit strateji uyarınca GitHub kazıma betiği 400 civarında standart, güvenli ROS2 MoveIt2 komutları çekmiştir. Geri kalan eksiklik ve "adversarial" ihtiyaç için doğrudan Sentetik Veri (Synthetic Data) üretme kararı alınmıştır.
-LLM API (Gemini vs.) kullanılarak tam formata uygun "instruction" ve "response" çiftleri oluşturulmuş, ardından LLM'in context/token engeline takılmamak adına Python ile prosedürel olarak 50 prompt daha üretilmiştir. 
+LLM API (Grok vb.) kullanılarak tam formata uygun "instruction" ve "response" çiftleri oluşturulmuş olup, ilk başta denenen prosedürel (kural bazlı) üretimden doğallığı/çeşitliliği bozmaması için vazgeçilmiştir. Bütün prompt'lar yapay zekanın (Grok) kendi saf muhakemesiyle oluşturulmuştur. 
 
 **Sonuç:** `ros2_dataset_v2.jsonl` isimli dosya tam tamına 923 satıra ulaşmış ve homojen olması adına algoritma ile karıştırılmıştır (shuffled). HuggingFace'teki benzer ROS 2 veri setlerinin ("The Stack", "pe-nlp") eğitici/iyi kodlar sunduğu ancak "kasıtlı güvenlik açıkları ve limitten bağımsız kontrol" mantığında veri setleri BARINDIRMADIĞI teyit edilmiş ve böylece Kendi Datasetimizi üretme kararımızın doğruluğu kanıtlanmıştır. Dataset aşaması tamamen kapatılmıştır.
 
