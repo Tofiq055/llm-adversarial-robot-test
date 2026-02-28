@@ -48,3 +48,10 @@ This report evaluates Hugging Face datasets for augmenting a ROS2 Python code ge
 2. **Convert to Adversarial**: Take standard code snippets found on HF and rewrite them as adversarial examples (e.g., removing rate limits or safety checks) to match the project's goal.
 3. **Sim-Heavy Prompts**: Use the `pe-nlp` data to create instructions for "Simulated ROS 2 Control," which is a distinct but related domain.
 4. **Instruction Generation**: Apply an LLM to "The Stack" Python files to generate natural language instructions, creating a larger, more diverse instruction-response dataset.
+
+---
+
+## Final Decision (2026-03-01)
+After reviewing the available Hugging Face datasets, we confirmed that while they are excellent sources of **standard, safe, and functional ROS 2 patterns** (e.g., from `The Stack` or `pe-nlp`), there is an absolute absence of "Adversarial" or malicious ROS 2 code. 
+
+Because our specific goal is to fine-tune a model to generate safety-bypassing and adversarial ROS 2 control logic, using HF directly would only make the model "safer". Therefore, we concluded that **synthetic dataset generation via LLM (Gemini)** is the only viable path to create the 60% adversarial bulk of our hybrid dataset (with the remaining 40% coming from our scraped safe GitHub data).
